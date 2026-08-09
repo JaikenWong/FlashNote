@@ -156,15 +156,36 @@ extension JSONEncoder {
     static let flashnote: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys]
-        e.dateEncodingStrategy = .iso8601
+        // 自定义 ISO8601 编码：带 fractional seconds，与 web 端 new Date().toISOString() 一致
+        e.dateEncodingStrategy = .custom { date, encoder in
+            var c = encoder.singleValueContainer()
+            try c.encode(ISO8601DateFormatter.withFractional.string(from: date))
+        }
         return e
+    }()
+}
+
+extension ISO8601DateFormatter {
+    static let withFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
     }()
 }
 
 extension JSONDecoder {
     static let flashnote: JSONDecoder = {
         let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
+        // 跟 Encoder 用同一种 formatter，保证对称
+        d.dateDecodingStrategy = .custom { decoder in
+            let c = try decoder.singleValueContainer()
+            let s = try c.decode(String.self)
+            // 尝试带 fractional，不带再 fallback
+            if let date = ISO8601DateFormatter.withFractional.date(from: s) { return date }
+            let plain = ISO8601DateFormatter()
+            if let date = plain.date(from: s) { return date }
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: "Invalid ISO date: \(s)")
+        }
         return d
     }()
 }

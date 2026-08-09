@@ -264,7 +264,7 @@ final class SyncServer {
     }
 
     private func handlePull(query: [String: String]) -> SyncResponse {
-        let since = query["since"].flatMap { ISO8601DateFormatter().date(from: $0) } ?? Date(timeIntervalSince1970: 0)
+        let since = query["since"].flatMap { Self.parseISO($0) } ?? Date(timeIntervalSince1970: 0)
         let deviceId = query["deviceId"] ?? ""
         // 先取「服务端此刻时间」再做快照：保证 serverTime 与过滤窗口一致，
         // 客户端用 serverTime 当下次 since 才不会漏掉快照后新增的记录
@@ -280,8 +280,8 @@ final class SyncServer {
                 "content": record.content,
                 "amount": record.amount as Any,
                 "tags": record.tags,
-                "createdAt": ISO8601DateFormatter().string(from: record.createdAt),
-                "updatedAt": ISO8601DateFormatter().string(from: record.updatedAt),
+                "createdAt": ISO8601DateFormatter.withFractional.string(from: record.createdAt),
+                "updatedAt": ISO8601DateFormatter.withFractional.string(from: record.updatedAt),
                 "deviceId": record.deviceId,
                 "deleted": record.deleted
             ]
@@ -289,7 +289,7 @@ final class SyncServer {
         _ = deviceId
         return jsonOk([
             "changes": arr,
-            "serverTime": ISO8601DateFormatter().string(from: now)
+            "serverTime": ISO8601DateFormatter.withFractional.string(from: now)
         ])
     }
 
@@ -308,8 +308,8 @@ final class SyncServer {
             let content = (raw["content"] as? String) ?? ""
             let amount = raw["amount"] as? Double
             let tags = (raw["tags"] as? [String]) ?? []
-            let createdAt = (raw["createdAt"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) } ?? Date()
-            let updatedAt = (raw["updatedAt"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) } ?? Date()
+            let createdAt = (raw["createdAt"] as? String).flatMap { Self.parseISO($0) } ?? Date()
+            let updatedAt = (raw["updatedAt"] as? String).flatMap { Self.parseISO($0) } ?? Date()
             let deviceId = (raw["deviceId"] as? String) ?? "unknown"
             let deleted = (raw["deleted"] as? Bool) ?? false
 
@@ -323,11 +323,22 @@ final class SyncServer {
 
         return jsonOk([
             "accepted": accepted,
-            "serverTime": ISO8601DateFormatter().string(from: Date())
+            "serverTime": ISO8601DateFormatter.withFractional.string(from: Date())
         ])
     }
 
     // MARK: - Helpers
+
+    /// 解析 ISO8601 字符串，兼容 fractional seconds
+    /// 默认 ISO8601DateFormatter 不解析 .fffZ 这种，web 端用 `new Date().toISOString()` 会带毫秒
+    private static func parseISO(_ str: String) -> Date? {
+        let withFrac = ISO8601DateFormatter()
+        withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = withFrac.date(from: str) { return d }
+        let plain = ISO8601DateFormatter()
+        if let d = plain.date(from: str) { return d }
+        return nil
+    }
 
     private func authorize(_ req: SyncRequest) -> Bool {
         guard let auth = req.headers["authorization"],

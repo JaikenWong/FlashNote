@@ -112,6 +112,14 @@ window.addEventListener('offline', () => {
   setSyncState('offline', '离线 · 待重试');
 });
 
+// iOS Safari 的 online/offline 事件不靠谱（onLine 不准）：
+// 回到前台时若已配对，主动重试一次
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && navigator.onLine && isPaired()) {
+    doSync(false);
+  }
+});
+
 // 配对 UI
 pairBtn.addEventListener('click', doPair);
 pairInput.addEventListener('input', e => {
@@ -318,11 +326,11 @@ function saveEdit() {
 
 function deleteFromEdit() {
   if (!editingRecord) return;
-  if (!confirm('删除这条记录？')) return;
   const id = editingRecord.id;
   closeEdit();
   softDelete(id, deviceId);
   refresh();
+  showToast('已删除');
   doSync(false);
 }
 
@@ -339,12 +347,22 @@ function renderList(rs) {
   const sorted = rs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const groups = {};
   const order = [];
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const weekStart = new Date(today.getTime() - 6 * 86400000);  // 本周 = 今天 + 前 6 天
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+
   for (const r of sorted) {
     const d = new Date(r.createdAt);
-    const key = `${d.getFullYear()}年${d.getMonth() + 1}月`;
-    if (!groups[key]) { groups[key] = { day: key, sum: 0, records: [] }; order.push(key); }
-    groups[key].records.push(r);
-    if (r.amount) groups[key].sum += r.amount;
+    const dayKey = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const groupKey = pickGroupKey(d, today, yesterday, weekStart, yearStart);
+    if (!groups[groupKey]) {
+      groups[groupKey] = { label: groupKey, sum: 0, records: [] };
+      order.push(groupKey);
+    }
+    groups[groupKey].records.push(r);
+    if (r.amount) groups[groupKey].sum += r.amount;
   }
   return order.map(k => {
     const g = groups[k];
@@ -352,8 +370,22 @@ function renderList(rs) {
       ? `<span class="sum">· 支出 <span class="v">¥${g.sum.toFixed(0)}</span></span>`
       : '';
     const cards = g.records.map(r => renderCard(r)).join('');
-    return `<div class="day-head">${escapeHtml(g.day)}${sumHtml}</div>${cards}`;
+    return `<div class="day-head">${escapeHtml(k)}${sumHtml}</div>${cards}`;
   }).join('');
+}
+
+function pickGroupKey(d, today, yesterday, weekStart, yearStart) {
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (day.getTime() === today.getTime()) return '今天';
+  if (day.getTime() === yesterday.getTime()) return '昨天';
+  if (day.getTime() >= weekStart.getTime() && day.getTime() < today.getTime()) {
+    const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+    return `本周·${wd}`;
+  }
+  if (day.getTime() >= yearStart.getTime()) {
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 function renderCard(r) {
@@ -377,6 +409,7 @@ function renderCard(r) {
 const LONG_PRESS_MS = 800;
 let pressTimer = null;
 let pressingBtn = null;
+let suppressClick = false;  // 长按触发删除后，吞掉随后的 click（防误开编辑）
 
 function startLongPress(btn) {
   cancelLongPress();
@@ -387,6 +420,9 @@ function startLongPress(btn) {
     btn.classList.remove('pressing');
     pressingBtn = null;
     pressTimer = null;
+    suppressClick = true;
+    // 若随后的 click 没来（pointercancel 等），300ms 后自动复位，防误吞下次点击
+    setTimeout(() => { suppressClick = false; }, 300);
     softDelete(id, deviceId);
     refresh();
     doSync(false);
@@ -407,15 +443,23 @@ listEl.addEventListener('pointerdown', e => {
     startLongPress(delBtn);
   }
 });
+// 无条件取消：pressing 时 del 按钮 pointer-events:none，指针事件打不到它，
+// 按 target 过滤会漏掉（desktop 无隐式 pointer capture）。
+// 松开 / 离开 / 取消 / 移出 任一都取消。
 ['pointerup', 'pointerleave', 'pointercancel', 'pointerout'].forEach(ev => {
-  listEl.addEventListener(ev, e => {
-    if (pressingBtn && (e.target === pressingBtn || pressingBtn.contains(e.target))) {
-      cancelLongPress();
-    }
+  listEl.addEventListener(ev, () => {
+    if (pressingBtn) cancelLongPress();
   });
 });
 
 listEl.addEventListener('click', e => {
+  // 长按删除完成后的 click（发生在 refresh 重渲染后）——直接吞掉
+  if (suppressClick) {
+    suppressClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
   // 阻止长按后 click 冒泡触发其他逻辑
   if (e.target.closest('[data-act="del"]')) {
     e.stopPropagation();
@@ -505,7 +549,14 @@ async function doSync(manual) {
 function setSyncState(state, text) {
   // synced 状态保持空 class（绿色默认）；其他状态加 class
   syncPill.className = 'sync-pill ' + (state === 'synced' ? '' : state);
-  syncText.textContent = text || state;
+  // 无自定义文案时给默认中文
+  const defaults = {
+    syncing: '同步中…',
+    offline: '离线 · 待重试',
+    error: '同步失败',
+    idle: '本地'
+  };
+  syncText.textContent = text || defaults[state] || state;
 }
 
 // ===== 工具 =====
