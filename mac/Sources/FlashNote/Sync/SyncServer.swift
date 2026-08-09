@@ -68,43 +68,67 @@ final class SyncServer {
         receiveRequest(conn)
     }
 
-    private func receiveRequest(_ conn: NWConnection) {
+    /// 用一个 struct 持有 per-connection 状态，避免递归调用时状态丢失
+    private final class ConnState {
         var request = SyncRequest()
         var headerBuf = Data()
         var bodyTarget: Int? = nil
         var bodyBuf = Data()
+        var done = false
+    }
 
+    private func receiveRequest(_ conn: NWConnection) {
+        let state = ConnState()
+        // 闭包持有 state 引用（class），状态跨 receive 调用保持
+        receiveLoop(conn, state: state)
+    }
+
+    private func receiveLoop(_ conn: NWConnection, state: ConnState) {
         conn.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             guard let self = self else { return }
+            if state.done { return }
+            if let error = error {
+                NSLog("[SyncServer] receive error: %@", String(describing: error))
+                conn.cancel()
+                return
+            }
             if let data = data, !data.isEmpty {
-                if request.method == nil {
-                    headerBuf.append(data)
-                    // 解析 header 边界
-                    if let range = headerBuf.range(of: Data("\r\n\r\n".utf8)) {
-                        let headerData = headerBuf.subdata(in: 0..<range.lowerBound)
-                        let rest = headerBuf.subdata(in: range.upperBound..<headerBuf.count)
-                        request = Self.parseRequest(headerData) ?? request
-                        if let cl = request.headers["content-length"], let n = Int(cl) {
-                            bodyTarget = n
-                            bodyBuf.append(rest)
+                NSLog("[SyncServer] got %d bytes", data.count)
+                if state.request.method == nil {
+                    state.headerBuf.append(data)
+                    if let range = state.headerBuf.range(of: Data("\r\n\r\n".utf8)) {
+                        let headerData = state.headerBuf.subdata(in: 0..<range.lowerBound)
+                        let rest = state.headerBuf.subdata(in: range.upperBound..<state.headerBuf.count)
+                        state.request = Self.parseRequest(headerData) ?? state.request
+                        NSLog("[SyncServer] parsed method=%@ path=%@", state.request.method ?? "nil", state.request.path)
+                        if let cl = state.request.headers["content-length"], let n = Int(cl) {
+                            state.bodyTarget = n
+                            state.bodyBuf.append(rest)
                         }
-                        if bodyTarget == nil { self.send(conn, self.response(for: request)); return }
+                        if state.bodyTarget == nil {
+                            state.done = true
+                            self.send(conn, self.response(for: state.request))
+                            return
+                        }
                     }
                 } else {
-                    bodyBuf.append(data)
+                    state.bodyBuf.append(data)
                 }
 
-                if let target = bodyTarget, bodyBuf.count >= target {
-                    request.body = bodyBuf.prefix(target)
-                    self.send(conn, self.response(for: request))
+                if let target = state.bodyTarget, state.bodyBuf.count >= target {
+                    state.request.body = state.bodyBuf.prefix(target)
+                    state.done = true
+                    self.send(conn, self.response(for: state.request))
                     return
                 }
             }
-            if isComplete || error != nil {
-                conn.cancel()
-            } else {
-                self.receiveRequest(conn)
+            if isComplete {
+                if !state.done {
+                    conn.cancel()
+                }
+                return
             }
+            self.receiveLoop(conn, state: state)
         }
     }
 

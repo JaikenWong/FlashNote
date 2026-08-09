@@ -37,8 +37,10 @@ struct FlashNoteApp: App {
 /// 保留一个 AppDelegate 钩子，方便 M3 同步层挂服务
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSLog("[App] didFinishLaunching")
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        NSLog("[App] activated")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

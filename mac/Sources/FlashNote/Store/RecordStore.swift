@@ -4,7 +4,9 @@ import Combine
 
 /// 本地数据存储 + 状态管理
 /// M1：纯本地 JSON 存储；M3 会叠加同步层
-@MainActor
+///
+/// 注意：不在 @MainActor 上 —— sync server 的后台线程需要直接访问 records。
+/// 写操作由 SwiftUI 在主线程触发（@Published 天然保证），后台线程只读。
 final class RecordStore: ObservableObject {
     @Published private(set) var records: [Record] = []
     @Published var filter: Filter = .all

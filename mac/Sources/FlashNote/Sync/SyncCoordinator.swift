@@ -29,31 +29,31 @@ final class SyncCoordinator: ObservableObject {
 
     func start() {
         guard !isRunning else { return }
+        NSLog("[SyncCoordinator] start() called")
+        let store = self.store
         let server = SyncServer(
             port: port,
             pairManager: pairManager,
             tokenStore: tokenStore,
-            recordsProvider: { [weak self] in
-                guard let self = self else { return [] }
-                return MainActor.assumeIsolated { self.store.records }
-            },
+            recordsProvider: { store.records },
             recordsApplier: { [weak self] incoming in
                 guard let self = self else { return }
-                MainActor.assumeIsolated {
-                    self.applyIncoming(incoming)
-                }
+                self.applyIncoming(incoming)
             }
         )
         let advertiser = MDNSAdvertiser(port: port)
         do {
+            NSLog("[SyncCoordinator] starting server...")
             try server.start()
+            NSLog("[SyncCoordinator] server started")
             try advertiser.start()
+            NSLog("[SyncCoordinator] advertiser started")
             self.server = server
             self.advertiser = advertiser
             self.isRunning = true
-            print("[SyncCoordinator] started on port \(port) · code=\(currentPairCode)")
+            NSLog("[SyncCoordinator] started on port \(port) · code=\(currentPairCode)")
         } catch {
-            print("[SyncCoordinator] failed: \(error)")
+            NSLog("[SyncCoordinator] failed: %@", String(describing: error))
         }
     }
 
@@ -65,7 +65,7 @@ final class SyncCoordinator: ObservableObject {
         isRunning = false
     }
 
-    // MARK: - LWW merge
+    // MARK: - LWW merge（主线程调用：UI 交互时）
 
     private func applyIncoming(_ incoming: [Record]) {
         store.mergeFromRemote(incoming)
