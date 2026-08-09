@@ -1,0 +1,143 @@
+import Foundation
+import SwiftUI
+import Combine
+
+/// 本地数据存储 + 状态管理
+/// M1：纯本地 JSON 存储；M3 会叠加同步层
+@MainActor
+final class RecordStore: ObservableObject {
+    @Published private(set) var records: [Record] = []
+    @Published var filter: Filter = .all
+    @Published var searchText: String = ""
+
+    private let storeURL: URL
+    private let saveQueue = DispatchQueue(label: "flashnote.save", qos: .utility)
+
+    enum Filter: Equatable, Hashable {
+        case all
+        case note
+        case expense
+        case tag(String)
+    }
+
+    init() {
+        self.storeURL = Self.makeStoreURL()
+        load()
+    }
+
+    // MARK: - 公开 API
+
+    func add(_ record: Record) {
+        records.insert(record, at: 0)
+        save()
+    }
+
+    func addFromInput(_ input: String) -> Record? {
+        guard let record = RecordParser.parse(input, deviceId: DeviceInfo.deviceId) else {
+            return nil
+        }
+        add(record)
+        return record
+    }
+
+    func delete(_ record: Record) {
+        if let idx = records.firstIndex(where: { $0.id == record.id }) {
+            records[idx].deleted = true
+            records[idx].updatedAt = Date()
+            save()
+        }
+    }
+
+    func hardDelete(_ record: Record) {
+        records.removeAll { $0.id == record.id }
+        save()
+    }
+
+    // MARK: - 过滤 / 查询
+
+    var visibleRecords: [Record] {
+        var rs = records.filter { !$0.deleted }
+
+        switch filter {
+        case .all:     break
+        case .note:    rs = rs.filter { $0.type == .note }
+        case .expense: rs = rs.filter { $0.type == .expense }
+        case .tag(let t): rs = rs.filter { $0.tags.contains(t) }
+        }
+
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            rs = rs.filter {
+                $0.content.lowercased().contains(q) ||
+                $0.tags.contains(where: { $0.lowercased().contains(q) })
+            }
+        }
+
+        return rs.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// 全部标签 + 出现次数
+    var allTags: [(String, Int)] {
+        var counts: [String: Int] = [:]
+        for r in records where !r.deleted {
+            for t in r.tags { counts[t, default: 0] += 1 }
+        }
+        return counts.sorted { $0.value > $1.value }
+    }
+
+    // MARK: - 存储
+
+    private static func makeStoreURL() -> URL {
+        let fm = FileManager.default
+        let base = try? fm.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let dir = (base ?? URL(fileURLWithPath: NSTemporaryDirectory()))
+            .appendingPathComponent("FlashNote", isDirectory: true)
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("records.json")
+    }
+
+    private func load() {
+        guard FileManager.default.fileExists(atPath: storeURL.path) else { return }
+        do {
+            let data = try Data(contentsOf: storeURL)
+            self.records = try JSONDecoder.flashnote.decode([Record].self, from: data)
+        } catch {
+            print("[FlashNote] load failed: \(error)")
+        }
+    }
+
+    private func save() {
+        let snapshot = records
+        let url = storeURL
+        saveQueue.async {
+            do {
+                let data = try JSONEncoder.flashnote.encode(snapshot)
+                try data.write(to: url, options: .atomic)
+            } catch {
+                print("[FlashNote] save failed: \(error)")
+            }
+        }
+    }
+}
+
+extension JSONEncoder {
+    static let flashnote: JSONEncoder = {
+        let e = JSONEncoder()
+        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+}
+
+extension JSONDecoder {
+    static let flashnote: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+}
