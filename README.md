@@ -89,13 +89,17 @@ http://<mac-ip>:9527/
 ## 端到端演示
 
 **Web → Mac 同步**（iPhone Safari 输一条，Mac 端几秒内出现）：
+
 ![Web 编辑](./docs/screenshots/web-edit.png)
 
 **搜索 + 标签筛选**（点 `#餐` 自动筛选）：
+
 ![Web 搜索](./docs/screenshots/web-search.png)
+
 ![Web 标签筛选](./docs/screenshots/web-tag-filter.png)
 
 **离线状态**（断网时橙色 pill + 联网自动重发）：
+
 ![Web 离线](./docs/screenshots/web-offline.png)
 
 ## 目录

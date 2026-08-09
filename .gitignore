@@ -17,5 +17,6 @@ DerivedData/
 prototype/preview*.png
 prototype/_archive/
 
-# Mac build 用的 web/ 镜像（从根 web/ 同步过来）；README.md 不需要镜像
+# Mac build 用的 web/ 镜像（从根 web/ 同步过来）；README.md / 测试文件不需要镜像
 mac/Sources/FlashNote/Resources/web/README.md
+mac/Sources/FlashNote/Resources/web/js/parser.test.mjs
