@@ -61,5 +61,14 @@ export function parse(input, deviceId) {
 }
 
 function genId() {
-  return 'r-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  // 用 crypto.randomUUID() 生成 RFC 4122 标准的 UUID v4
+  // Mac 端 Record.id 是 UUID 类型，必须严格匹配才能被 handlePush 接受
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // 兜底：极端环境下用 Math.random 凑一个 v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
 }

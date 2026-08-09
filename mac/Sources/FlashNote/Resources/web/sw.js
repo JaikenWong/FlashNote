@@ -1,7 +1,7 @@
-// sw.js · 极简 service worker：缓存 web 静态资源，支持离线打开 UI
-// 数据本身不缓存（数据走 localStorage + 同步 API）
+// sw.js · service worker：network-first 静态资源（避免缓存老代码）
+// API 请求不拦截（数据走 localStorage + 同步 API）
 
-const CACHE = 'flashnote-v1';
+const CACHE = 'flashnote-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   '/js/parser.js',
   '/js/storage.js',
   '/js/sync.js',
+  '/js/stats.js',
   '/manifest.json',
   '/images/icon-512.png'
 ];
@@ -28,22 +29,21 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // 跨域 / API 请求不缓存
+  // API 请求不缓存
   if (url.pathname.startsWith('/api/')) return;
-  // 只缓存同源 GET
+  // 只处理同源 GET
   if (e.request.method !== 'GET') return;
+  if (url.origin !== self.location.origin) return;
 
+  // network-first：先尝试服务器，失败才用 cache
+  // 这样代码改动能立刻生效（避免 service worker 缓存老 js 导致 bug）
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(resp => {
-        // 只缓存成功的同源响应
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
-        }
-        return resp;
-      }).catch(() => cached);
-    })
+    fetch(e.request).then(resp => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone)).catch(() => {});
+      }
+      return resp;
+    }).catch(() => caches.match(e.request).then(c => c || Response.error()))
   );
 });
