@@ -1,0 +1,91 @@
+<view class="page">
+  <!-- 顶部：标题 + 同步状态 -->
+  <view class="topbar">
+    <view class="title">闪记</view>
+    <view class="sync-pill">
+      <view class="dot"></view>
+      <text>本地</text>
+    </view>
+  </view>
+
+  <!-- 卡片列表 -->
+  <view class="list" wx:if="{{groupedRecords.length > 0}}">
+    <block wx:for="{{groupedRecords}}" wx:key="day">
+      <view class="day-head">
+        <text>{{item.day}}</text>
+        <text class="sum" wx:if="{{item.sumText}}">· 支出 <text class="v">{{item.sumText}}</text></text>
+      </view>
+      <view
+        wx:for="{{item.records}}"
+        wx:for-item="r"
+        wx:key="id"
+        class="card {{r.type === 'expense' ? 'expense' : ''}}"
+        bindlongpress="onLongPressCard"
+        data-id="{{r.id}}"
+      >
+        <view class="text" wx:if="{{r.content}}">{{r.content}}</view>
+        <view class="meta">
+          <text class="amount" wx:if="{{r.amount}}">¥{{r.amount}}</text>
+          <text wx:if="{{r.amount}}" class="muted">·</text>
+          <text wx:for="{{r.tags}}" wx:for-item="t" wx:key="*this" class="tag-chip">#{{t}}</text>
+          <text class="muted" style="margin-left:auto;">{{r.timeText}}</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:else>
+    <view class="emoji">📝</view>
+    <view>还没有记录</view>
+    <view class="hint">试试在底部输入 午饭 28 #餐</view>
+  </view>
+
+  <!-- 底部输入条 -->
+  <view class="quick-input">
+    <view class="preview" wx:if="{{draft}}">
+      <text wx:if="{{previewAmount}}" class="amount">¥{{previewAmount}}</text>
+      <text wx:if="{{previewAmount}}" class="muted">·</text>
+      <text wx:for="{{previewTags}}" wx:for-item="t" wx:key="*this" class="tag-chip">#{{t}}</text>
+      <text class="muted" style="margin-left:auto;">{{previewType === 'expense' ? '账目' : '笔记'}}</text>
+    </view>
+    <view class="input-row">
+      <input
+        class="input"
+        placeholder="记一笔… 支持 #标签  ¥金额"
+        value="{{draft}}"
+        bindinput="onInput"
+        bindconfirm="onSubmit"
+        confirm-type="done"
+      />
+      <view class="send" bindtap="onSubmit">
+        <text class="send-icon">＋</text>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 浮层：快速记录 -->
+<view class="modal-mask" wx:if="{{showModal}}" bindtap="onCloseModal">
+  <view class="modal" catchtap="">
+    <view class="modal-title">快速记录</view>
+    <textarea
+      class="modal-input"
+      placeholder="午饭 28 #餐 · 想法 #产品"
+      value="{{draft}}"
+      bindinput="onModalInput"
+      auto-focus
+      auto-height
+    />
+    <view class="modal-preview" wx:if="{{draft}}">
+      <text wx:if="{{previewAmount}}" class="amount">¥{{previewAmount}}</text>
+      <text wx:if="{{previewAmount}}" class="muted">·</text>
+      <text wx:for="{{previewTags}}" wx:for-item="t" wx:key="*this" class="tag-chip">#{{t}}</text>
+      <text class="muted" style="margin-left:auto;">{{previewType === 'expense' ? '账目' : '笔记'}}</text>
+    </view>
+    <view class="modal-actions">
+      <view class="btn outline" bindtap="onCloseModal">取消</view>
+      <view class="btn" bindtap="onModalSubmit">记录</view>
+    </view>
+  </view>
+</view>

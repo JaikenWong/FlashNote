@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="header">
+    <view class="label">本月支出</view>
+    <view class="month">{{monthLabel}}</view>
+  </view>
+
+  <view class="hero">
+    <view class="amount">¥<text class="big">{{totalAmount}}</text></view>
+    <view class="compare">{{compare}} · 共 {{recordCount}} 笔</view>
+  </view>
+
+  <view class="card-section">
+    <view class="section-title">分类占比</view>
+    <view wx:if="{{categories.length === 0}}" class="empty-mini">本月还没有账目</view>
+    <view class="cat" wx:for="{{categories}}" wx:key="name">
+      <view class="cat-name">{{item.name}}</view>
+      <view class="cat-bar">
+        <view class="bar" style="width: {{item.percent}}%; background: {{item.color}};"></view>
+      </view>
+      <view class="cat-amount">¥{{item.amount}}</view>
+    </view>
+  </view>
+
+  <view class="card-section">
+    <view class="section-title">最近 7 天</view>
+    <view class="week">
+      <view class="bar-col" wx:for="{{weekBars}}" wx:key="label">
+        <view class="bar" style="height: {{item.percent}}%; background: {{item.label === '今' ? '#52C41A' : '#F6FFED'}};"></view>
+        <view class="bar-label" style="color: {{item.label === '今' ? '#389E0D' : '#8C8C8C'}};">{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+</view>

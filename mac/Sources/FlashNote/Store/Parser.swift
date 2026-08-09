@@ -79,18 +79,23 @@ enum RecordParser {
         let range = NSRange(text.startIndex..., in: text)
         let matches = tagRegex.matches(in: text, range: range)
 
+        // tags：去重但保留用户书写顺序
         var tags: [String] = []
-        var cleaned = text
-
-        // 从后往前删，避免 index shift
-        for match in matches.reversed() {
+        var seen = Set<String>()
+        for match in matches {
             if match.numberOfRanges > 1,
-               let tagRange = Range(match.range(at: 1), in: cleaned) {
-                let tag = String(cleaned[tagRange])
-                if !tags.contains(tag) {
-                    tags.insert(tag, at: 0)  // 保留用户书写顺序
+               let tagRange = Range(match.range(at: 1), in: text) {
+                let tag = String(text[tagRange])
+                if !seen.contains(tag) {
+                    seen.insert(tag)
+                    tags.append(tag)
                 }
             }
+        }
+
+        // 从原 text 上删除所有 #xxx（matches 里的 range 是相对原 text 的）
+        var cleaned = text
+        for match in matches.reversed() {
             if let fullRange = Range(match.range, in: cleaned) {
                 cleaned.removeSubrange(fullRange)
             }

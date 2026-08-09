@@ -1,0 +1,46 @@
+<view class="page">
+  <!-- 头部：用户 + 设备信息 -->
+  <view class="profile">
+    <view class="avatar">📱</view>
+    <view class="info">
+      <view class="name">闪记</view>
+      <view class="device-id">device-id: {{deviceId}}</view>
+      <view class="device-info">{{deviceInfo}} · {{recordCount}} 条记录</view>
+    </view>
+  </view>
+
+  <!-- 配对卡片（M3 实装；现在展示 mock） -->
+  <view class="pair-card">
+    <view class="pair-title">设备配对</view>
+    <view class="pair-row" wx:if="{{paired}}">
+      <view class="pair-info">
+        <view class="pair-label">已连接</view>
+        <view class="pair-sub">MacBook Pro · 最后同步 刚刚</view>
+      </view>
+      <view class="pair-pill">已连接</view>
+    </view>
+    <view class="pair-action" wx:else>
+      <view class="pair-tip">在 Mac 端生成 4 位配对码后点击下方</view>
+      <view class="btn" bindtap="onPair">开始配对</view>
+    </view>
+  </view>
+
+  <!-- 设置列表 -->
+  <view class="cells">
+    <view class="cell" bindtap="onExport">
+      <view class="cell-icon">📤</view>
+      <view class="cell-text">导出数据（Markdown）</view>
+      <view class="cell-arrow">›</view>
+    </view>
+    <view class="cell">
+      <view class="cell-icon">🎨</view>
+      <view class="cell-text">外观</view>
+      <view class="cell-arrow">›</view>
+    </view>
+    <view class="cell">
+      <view class="cell-icon">ℹ️</view>
+      <view class="cell-text">关于闪记</view>
+      <view class="cell-arrow cell-meta">v0.1.0 ›</view>
+    </view>
+  </view>
+</view>

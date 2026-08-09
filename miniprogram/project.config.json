@@ -1,0 +1,19 @@
+{
+  "miniprogramRoot": "miniprogram/",
+  "projectname": "flashnote",
+  "description": "闪记 - 快速记录工具",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "2.30.4",
+  "condition": {}
+}

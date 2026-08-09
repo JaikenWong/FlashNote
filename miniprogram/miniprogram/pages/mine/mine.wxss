@@ -1,0 +1,130 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: 200rpx;
+  background: var(--c-page);
+}
+
+.profile {
+  background: #fff;
+  padding: 32rpx 28rpx 36rpx;
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 16rpx;
+}
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  background: var(--c-green-soft);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+}
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.info .name {
+  font-size: 32rpx;
+  font-weight: 500;
+}
+.info .device-id {
+  font-size: 22rpx;
+  color: var(--c-text-3);
+  font-family: "SF Mono", monospace;
+  margin-top: 4rpx;
+}
+.info .device-info {
+  font-size: 22rpx;
+  color: var(--c-text-3);
+  margin-top: 4rpx;
+}
+
+.pair-card {
+  background: #fff;
+  margin: 0 24rpx 16rpx;
+  border-radius: 24rpx;
+  padding: 28rpx 28rpx;
+  border: 2rpx solid var(--c-green-faint);
+}
+.pair-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--c-text-1);
+  margin-bottom: 16rpx;
+}
+.pair-row {
+  display: flex;
+  align-items: center;
+}
+.pair-info { flex: 1; }
+.pair-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--c-green-deep);
+}
+.pair-sub {
+  font-size: 22rpx;
+  color: var(--c-text-3);
+  margin-top: 4rpx;
+}
+.pair-pill {
+  background: var(--c-green-soft);
+  color: var(--c-green-deep);
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+}
+.pair-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 0;
+}
+.pair-tip {
+  font-size: 24rpx;
+  color: var(--c-text-3);
+  text-align: center;
+}
+
+.cells {
+  background: #fff;
+  margin: 0 24rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+}
+.cell {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 28rpx 24rpx;
+  border-bottom: 1rpx solid var(--c-border);
+  font-size: 28rpx;
+}
+.cell:last-child { border-bottom: none; }
+.cell-icon {
+  width: 48rpx;
+  height: 48rpx;
+  background: var(--c-green-soft);
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+}
+.cell-text {
+  flex: 1;
+  color: var(--c-text-1);
+}
+.cell-arrow {
+  color: var(--c-text-3);
+  font-size: 32rpx;
+  font-weight: 300;
+}
+.cell-meta {
+  font-size: 24rpx;
+  color: var(--c-text-4);
+}
