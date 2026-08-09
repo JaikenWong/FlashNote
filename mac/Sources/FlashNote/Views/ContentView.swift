@@ -5,23 +5,29 @@ struct ContentView: View {
     @EnvironmentObject var sync: SyncCoordinator
     @State private var showQuickRecord = false
     @State private var showSyncSettings = false
+    @State private var showExport = false
     @State private var lastInserted: Record?
+    @State private var mainView: MainViewKind = .cards
+
+    enum MainViewKind { case cards, stats }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             HStack(spacing: 0) {
-                SidebarView(store: store)
+                SidebarView(store: store, mainView: $mainView)
                     .frame(width: 200)
 
                 mainArea
             }
 
-            // 底部浮动输入条
-            QuickInputBar(store: store) { record in
-                lastInserted = record
+            // 底部浮动输入条（仅在 cards 视图显示）
+            if mainView == .cards {
+                QuickInputBar(store: store) { record in
+                    lastInserted = record
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
         }
         .frame(minWidth: 800, minHeight: 540)
         .background(Theme.page)
@@ -31,6 +37,9 @@ struct ContentView: View {
             }
             if showSyncSettings {
                 SyncSettingsModal(sync: sync, isOpen: $showSyncSettings)
+            }
+            if showExport {
+                ExportModal(store: store, isOpen: $showExport)
             }
         }
         // Cmd+N 唤起快速记录
@@ -43,35 +52,56 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // 顶栏
             HStack(spacing: 12) {
-                // 搜索
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(Theme.text3)
-                    TextField("搜索…", text: $store.searchText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 13))
-                    if !store.searchText.isEmpty {
-                        Button {
-                            store.searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(Theme.text4)
+                // 搜索（仅在 cards 视图）
+                if mainView == .cards {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(Theme.text3)
+                        TextField("搜索…", text: $store.searchText)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 13))
+                        if !store.searchText.isEmpty {
+                            Button {
+                                store.searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(Theme.text4)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.rBtn)
+                            .fill(Theme.page)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.rBtn)
+                            .stroke(Theme.border, lineWidth: 1)
+                    )
                 }
-                .padding(.horizontal, 10)
-                .frame(height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.rBtn)
-                        .fill(Theme.page)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.rBtn)
-                        .stroke(Theme.border, lineWidth: 1)
-                )
 
                 Spacer()
+
+                // 导出按钮
+                Button {
+                    showExport = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 11))
+                        Text("导出")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundColor(Theme.text2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color(white: 0.96))
+                    )
+                }
+                .buttonStyle(.plain)
 
                 // 同步状态 pill
                 Button {
@@ -88,8 +118,11 @@ struct ContentView: View {
                 Rectangle().fill(Theme.border).frame(height: 1)
             }
 
-            // 卡片列表
-            CardListView(store: store)
+            // 主体
+            switch mainView {
+            case .cards:  CardListView(store: store)
+            case .stats:  StatsView(store: store)
+            }
         }
     }
 }

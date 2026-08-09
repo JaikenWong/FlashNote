@@ -2,9 +2,15 @@ import SwiftUI
 
 struct SidebarView: View {
     @ObservedObject var store: RecordStore
+    @Binding var mainView: ContentView.MainViewKind
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // 视图
+            sectionHeader("视图")
+            viewButton(.cards, icon: "≡", label: "全部")
+            viewButton(.stats, icon: "📊", label: "统计")
+
             // 分类区
             sectionHeader("分类")
             navItem(.all, icon: "≡", label: "全部", count: store.records.filter { !$0.deleted }.count)
@@ -42,10 +48,38 @@ struct SidebarView: View {
     }
 
     @ViewBuilder
+    private func viewButton(_ kind: ContentView.MainViewKind, icon: String, label: String) -> some View {
+        let isActive = mainView == kind
+        Button {
+            mainView = kind
+        } label: {
+            HStack(spacing: 8) {
+                Text(icon)
+                    .font(.system(size: 13))
+                    .frame(width: 18)
+                    .foregroundColor(isActive ? Theme.green : Theme.text3)
+                Text(label)
+                    .font(.system(size: 13, weight: isActive ? .medium : .regular))
+                    .foregroundColor(isActive ? Theme.greenDeep : Theme.text2)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.rBtn)
+                    .fill(isActive ? Theme.greenSoft : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    @ViewBuilder
     private func navItem(_ filter: RecordStore.Filter, icon: String, label: String, count: Int) -> some View {
         let isActive = store.filter == filter
         Button {
             store.filter = filter
+            mainView = .cards
         } label: {
             HStack(spacing: 8) {
                 Text(icon)
