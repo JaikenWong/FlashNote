@@ -279,8 +279,30 @@ FlashNote/
 | M4 | 统计页 / 导出 / 搜索增强 | ✅ |
 | M5 | 编辑记录 / 标签点击筛选 / 体验打磨 | ✅ |
 | M6 | v2 架构：Web 替换小程序，Mac 内置静态文件服务 | ✅ |
+| M7 | Web 增强：搜索 / 长按删除 / 离线重试 / 同步 bug 修复 | ✅ |
 
-> 全部 6 个里程碑已完成。Web 端跑通：任意浏览器开 `http://mac-ip:9527/` → 输入 4 位码 → 拉取/推送。
+> 全部 7 个里程碑已完成。Web 端跑通：任意浏览器开 `http://mac-ip:9527/` → 输入 4 位码 → 拉取/推送。
+
+## 11. 截图速览
+
+| 端 | 状态 | 截图 |
+| --- | --- | --- |
+| Mac app | 卡片流 + 侧边栏 | [docs/screenshots/mac-app.png](./docs/screenshots/mac-app.png) |
+| Web 端 | 列表 + 搜索 | [docs/screenshots/web-list.png](./docs/screenshots/web-list.png) |
+| Web 端 | 统计页 | [docs/screenshots/web-stats.png](./docs/screenshots/web-stats.png) |
+| Web 端 | 编辑 modal | [docs/screenshots/web-edit.png](./docs/screenshots/web-edit.png) |
+| Web 端 | 搜索筛选 | [docs/screenshots/web-search.png](./docs/screenshots/web-search.png) |
+| Web 端 | 标签筛选 | [docs/screenshots/web-tag-filter.png](./docs/screenshots/web-tag-filter.png) |
+| Web 端 | 离线状态 | [docs/screenshots/web-offline.png](./docs/screenshots/web-offline.png) |
+
+## 12. 已知工程教训
+
+- **`@Published` 数组必须主线程读**——后台线程并发访问会出现"时灵时不灵"的同步 bug
+- **同步游标用服务端时钟**，不要用本地时钟（设备间时钟偏差会漏拉）
+- **软删除时所有权转移**——web 端删 Mac 来的记录，要把 deviceId 改成本设备，否则推不回去
+- **Service worker 缓存能屏蔽掉你刚发的 fix**——fetch 策略用 network-first + bump cache key
+- **`UUID(uuidString:)` 失败要 log warn**——静默 `continue` 会让坏数据"消失"
+- **id 格式要前后端约定一致**——`r-xxxx-xxxx` 跟 `UUID` 类型不匹配，会被 handlePush 静默拒绝
 
 ---
 
