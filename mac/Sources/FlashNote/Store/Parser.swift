@@ -99,20 +99,31 @@ enum RecordParser {
                 let targetWd = wdMap[c] ?? 0
                 let cal = Calendar.current
                 let todayWd = (cal.component(.weekday, from: now) - 1 + 7) % 7  // 0=Sun..6=Sat
-                let offset = (todayWd - targetWd + 7) % 7 + 7
+                // 距本周一天数（周一=0）
+                let daysSinceMon = (todayWd + 6) % 7
+                // 目标相对周一偏移：一=0,二=1,...日=6
+                let relTarget = (targetWd + 6) % 7
+                let offset = daysSinceMon + 7 - relTarget
                 return cal.date(byAdding: .day, value: -offset, to: now) ?? now
             }))
         }
-        // 上[一二三四五]周[日一二三四五六末天]
+        // 上[一二三四五]周[日一二三四五六末天]（上N周X）
         if let r = try? NSRegularExpression(pattern: #"上([一二三四五])周([日一二三四五六末天])"#) {
             ps.append((r, { m, s, now in
                 guard let m = m, m.numberOfRanges > 2,
+                      let nRange = Range(m.range(at: 1), in: s),
+                      let nC = s[nRange].first,
+                      let N = cnNum[nC],
                       let wRange = Range(m.range(at: 2), in: s),
                       let c = s[wRange].first else { return nil }
                 let targetWd = wdMap[c] ?? 0
                 let cal = Calendar.current
                 let todayWd = (cal.component(.weekday, from: now) - 1 + 7) % 7
-                let offset = (todayWd - targetWd + 7) % 7 + 7
+                // 距本周一天数（周一=0）
+                let daysSinceMon = (todayWd + 6) % 7
+                // 目标相对周一偏移：一=0,二=1,...日=6
+                let relTarget = (targetWd + 6) % 7
+                let offset = daysSinceMon + 7 * N - relTarget
                 return cal.date(byAdding: .day, value: -offset, to: now) ?? now
             }))
         }
@@ -130,8 +141,28 @@ enum RecordParser {
                 return cal.date(byAdding: .day, value: offset, to: now) ?? now
             }))
         }
-        // M月D日 / M-D / M/D
-        if let r = try? NSRegularExpression(pattern: #"(\d{1,2})\s*[月\-/]\s*(\d{1,2})\s*[日号]?"#) {
+        // YYYY年M月D日 / YYYY-M-D / YYYY/M/D（必须在 M月D日 之前，
+        //  否则 "2012-5-3" 会被 M月D日 抓成 "12-5" → 12月5日）
+        if let r = try? NSRegularExpression(pattern: #"(\d{4})\s*[年\-/]\s*(\d{1,2})\s*[月\-/]\s*(\d{1,2})\s*[日号]?"#) {
+            ps.append((r, { m, s, now in
+                guard let m = m, m.numberOfRanges > 3,
+                      let yRange = Range(m.range(at: 1), in: s),
+                      let mRange = Range(m.range(at: 2), in: s),
+                      let dRange = Range(m.range(at: 3), in: s) else { return nil }
+                let Y = Int(s[yRange]) ?? 0
+                let M = Int(s[mRange]) ?? 0
+                let D = Int(s[dRange]) ?? 0
+                guard M >= 1 && M <= 12 && D >= 1 && D <= 31 else { return nil }
+                let cal = Calendar.current
+                var comps = cal.dateComponents([.hour, .minute, .second], from: now)
+                comps.year = Y
+                comps.month = M
+                comps.day = D
+                return cal.date(from: comps)
+            }))
+        }
+        // M月D日 / M-D / M/D（前面不能是数字，避免吞掉 YYYY 尾段如 "12-5"）
+        if let r = try? NSRegularExpression(pattern: #"(?<!\d)(\d{1,2})\s*[月\-/]\s*(\d{1,2})\s*[日号]?"#) {
             ps.append((r, { m, s, now in
                 guard let m = m, m.numberOfRanges > 2,
                       let mRange = Range(m.range(at: 1), in: s),
@@ -149,25 +180,6 @@ enum RecordParser {
                     d = cal.date(from: comps) ?? d
                 }
                 return d
-            }))
-        }
-        // YYYY年M月D日 / YYYY-M-D / YYYY/M/D
-        if let r = try? NSRegularExpression(pattern: #"(\d{4})\s*[年\-/]\s*(\d{1,2})\s*[月\-/]\s*(\d{1,2})\s*[日号]?"#) {
-            ps.append((r, { m, s, now in
-                guard let m = m, m.numberOfRanges > 3,
-                      let yRange = Range(m.range(at: 1), in: s),
-                      let mRange = Range(m.range(at: 2), in: s),
-                      let dRange = Range(m.range(at: 3), in: s) else { return nil }
-                let Y = Int(s[yRange]) ?? 0
-                let M = Int(s[mRange]) ?? 0
-                let D = Int(s[dRange]) ?? 0
-                guard M >= 1 && M <= 12 && D >= 1 && D <= 31 else { return nil }
-                let cal = Calendar.current
-                var comps = cal.dateComponents([.hour, .minute, .second], from: now)
-                comps.year = Y
-                comps.month = M
-                comps.day = D
-                return cal.date(from: comps)
             }))
         }
 

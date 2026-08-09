@@ -42,13 +42,41 @@ final class ParserDateTests: XCTestCase {
     // MARK: - 周X
 
     func testLastWeekday() {
-        // 上周三 → 距今 7-? 天前的那一周
+        // 上周三 = 上一自然周的周三（周一起始）
         let r = RecordParser.parse("上周三午饭 30", deviceId: deviceId)!
         let wd = Calendar.current.component(.weekday, from: r.createdAt)
         // 周三 = 4 (Sun=1)
         XCTAssertEqual(wd, 4)
         let diff = daysBetween(r.createdAt, Date())
-        XCTAssertTrue(diff < 0 && diff >= -7, "上周X 应在 1-7 天前，得到 \(diff)")
+        // 上周X 在 1-13 天前（随今天星期几浮动）
+        XCTAssertTrue(diff < 0 && diff >= -13, "上周X 应在 1-13 天前，得到 \(diff)")
+    }
+
+    func testNWeeksAgo() {
+        // 上三周三 → 3 周前的周三，与 上周三 不同
+        let three = RecordParser.parse("上三周三午饭 30", deviceId: deviceId)!
+        let one = RecordParser.parse("上周三午饭 30", deviceId: deviceId)!
+        let cal = Calendar.current
+        let diff = cal.dateComponents([.day], from: three.createdAt, to: one.createdAt).day
+        XCTAssertEqual(diff, 14, "上三周三应比上周三早两周")
+        XCTAssertEqual(cal.component(.weekday, from: three.createdAt), 4)
+    }
+
+    func testNWeekdayCorrectCharacter() {
+        // 上五周六 → 5 周前的周六，weekday = 7 (Sun=1)
+        let r = RecordParser.parse("上五周六咖啡", deviceId: deviceId)!
+        XCTAssertEqual(Calendar.current.component(.weekday, from: r.createdAt), 7)
+    }
+
+    func testYYYYMDNotHijackedByMD() {
+        // 关键回归：2012-5-3 不能被 M月D日 抓成 12月5日
+        let r = RecordParser.parse("2012-5-3午饭", deviceId: deviceId)!
+        let (Y, M, D) = ymd(r.createdAt)
+        XCTAssertEqual(Y, 2012)
+        XCTAssertEqual(M, 5)
+        XCTAssertEqual(D, 3)
+        XCTAssertNil(r.amount, "日期里的数字不应被当 amount")
+        XCTAssertEqual(r.content, "午饭")
     }
 
     func testBareWeekdayPast() {

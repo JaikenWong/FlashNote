@@ -79,10 +79,10 @@ export function parse(input, deviceId) {
  *   昨天 / 昨晚
  *   前天
  *   N 天前
- *   上周 X（X = 日一二三四五六天末）
+ *   上周 X（X = 日一二三四五六天末）/ 上 N 周 X
  *   周 X（本周X 已过 = 上周X；未到 = 本周X）
+ *   YYYY 年 M 月 D 日 / YYYY-M-D / YYYY/M/D（先于 M月D日，防劫持）
  *   M 月 D 日 / M-D / M/D（今年；超过今天则去年）
- *   YYYY 年 M 月 D 日 / YYYY-M-D / YYYY/M/D
  */
 export function extractDate(input, now = new Date()) {
   let date = now;
@@ -118,18 +118,24 @@ export function extractDate(input, now = new Date()) {
     }
   }
 
-  // 5) 上周 X / 上 X 周 X
+  // 5) 上周X / 上N周X（周一自然周）
   if (!matched) {
     const wdMap = { '日': 0, '天': 0, '末': 6, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6 };
-    let m = input.match(/上周([日一二三四五六末天])/);
-    if (!m) m = input.match(/上([一二三四五])周([日一二三四五六末天])/);
+    const cnNum = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5 };
+    const todayWd = now.getDay();
+    // 距本周一几天（周一=0）：Sun=6, Mon=0, Tue=1, ... Sat=5
+    const daysSinceMon = (todayWd + 6) % 7;
+    // 先试 上N周X（如「上三周三」），再试 上周X
+    let m = input.match(/上([一二三四五])周([日一二三四五六末天])/);
+    if (!m) m = input.match(/上周([日一二三四五六末天])/);
     if (m) {
       matched = m[0];
-      const targetWd = wdMap[m[1]] ?? wdMap[m[2]];
-      const todayWd = now.getDay();
-      // 本周一 = (todayWd === 0 ? -6 : 1 - todayWd) 天前
-      const thisMondayOffset = todayWd === 0 ? 6 : todayWd - 1;
-      const offset = thisMondayOffset + 7 - targetWd;
+      const N = m[2] ? (cnNum[m[1]] ?? 1) : 1;
+      const wdChar = m[2] || m[1];
+      const targetWd = wdMap[wdChar] ?? 0;
+      // 目标相对周一偏移：一=0, 二=1, ... 日=6
+      const relTarget = (targetWd + 6) % 7;
+      const offset = daysSinceMon + 7 * N - relTarget;
       const d = new Date(now);
       d.setDate(d.getDate() - offset);
       date = d;
@@ -153,9 +159,22 @@ export function extractDate(input, now = new Date()) {
     }
   }
 
-  // 7) M月D日 / M-D / M/D
+  // 7) YYYY-MM-DD / YYYY/MM/DD / YYYY年M月D日（必须在 M月D日 之前匹配，
+  //    否则 "2012-5-3" 会被 M月D日 抓成 "12-5" → 12月5日）
   if (!matched) {
-    const m = input.match(/(\d{1,2})\s*[月\-\/]\s*(\d{1,2})\s*[日号]?/);
+    const m = input.match(/(\d{4})\s*[年\-\/]\s*(\d{1,2})\s*[月\-\/]\s*(\d{1,2})\s*[日号]?/);
+    if (m) {
+      matched = m[0];
+      const Y = parseInt(m[1], 10);
+      const M = parseInt(m[2], 10) - 1;
+      const D = parseInt(m[3], 10);
+      date = new Date(Y, M, D, now.getHours(), now.getMinutes(), now.getSeconds());
+    }
+  }
+
+  // 8) M月D日 / M-D / M/D（前面不能是数字，避免吞掉 YYYY 的尾段如 "12-5"）
+  if (!matched) {
+    const m = input.match(/(?<!\d)(\d{1,2})\s*[月\-\/]\s*(\d{1,2})\s*[日号]?/);
     if (m) {
       const M = parseInt(m[1], 10);
       const D = parseInt(m[2], 10);
@@ -170,18 +189,6 @@ export function extractDate(input, now = new Date()) {
         }
         date = d;
       }
-    }
-  }
-
-  // 8) YYYY-MM-DD / YYYY/MM/DD / YYYY年M月D日
-  if (!matched) {
-    const m = input.match(/(\d{4})\s*[年\-\/]\s*(\d{1,2})\s*[月\-\/]\s*(\d{1,2})\s*[日号]?/);
-    if (m) {
-      matched = m[0];
-      const Y = parseInt(m[1], 10);
-      const M = parseInt(m[2], 10) - 1;
-      const D = parseInt(m[3], 10);
-      date = new Date(Y, M, D, now.getHours(), now.getMinutes(), now.getSeconds());
     }
   }
 
