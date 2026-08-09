@@ -160,7 +160,7 @@ final class SyncServer {
         case ("GET", "/api/info"):
             return jsonOk([
                 "name": Host.current().localizedName ?? "Mac",
-                "version": "0.1.0",
+                "version": "0.0.1",
                 "pairCode": pairManager.code,
                 "records": recordsProvider().filter { !$0.deleted }.count
             ])
@@ -258,7 +258,7 @@ final class SyncServer {
             "token": token,
             "hostInfo": [
                 "name": Host.current().localizedName ?? "Mac",
-                "version": "0.1.0"
+                "version": "0.0.1"
             ]
         ])
     }
