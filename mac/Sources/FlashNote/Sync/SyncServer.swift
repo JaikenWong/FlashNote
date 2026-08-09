@@ -176,8 +176,70 @@ final class SyncServer {
             guard authorize(req) else { return unauthorized() }
             return handlePush(body: req.body)
 
+        case ("GET", "/api/ping"):
+            // 轻量 ping，用于 web 端检测 server 可达性
+            return jsonOk(["ok": true])
+
+        case ("GET", _):
+            // 其它 GET 请求：serve 静态 web 资源
+            if req.method == "GET" {
+                return serveStatic(path: path)
+            }
+            return SyncResponse(status: 404, body: Data("not found".utf8))
+
         default:
             return SyncResponse(status: 404, body: Data("not found".utf8))
+        }
+    }
+
+    /// Serve 静态 web 资源（index.html / css / js / images / manifest.json / sw.js）
+    private func serveStatic(path: String) -> SyncResponse {
+        // 规范化路径，防 ../ 越权
+        var cleanPath = path
+        if cleanPath == "/" { cleanPath = "/index.html" }
+        // 去掉前导 /，保留子目录
+        let relPath = String(cleanPath.dropFirst())
+        if relPath.contains("..") { return SyncResponse(status: 403, body: Data("forbidden".utf8)) }
+
+        // SwiftPM 把 web/ 整个目录拷进了 bundle，资源路径 = "web/<relPath>"
+        // 用 path(forResource:ofType:) 拿子目录里的文件
+        let parts = relPath.split(separator: ".", maxSplits: 1).map(String.init)
+        let name = parts[0]
+        let ext = parts.count > 1 ? parts[1] : nil
+        let subdir = "web"
+
+        let url: URL?
+        if let ext = ext {
+            url = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: subdir)
+        } else {
+            // 无扩展名：直接用 path
+            url = Bundle.module.url(forResource: relPath, withExtension: nil, subdirectory: subdir)
+        }
+
+        guard let fileURL = url else {
+            return SyncResponse(status: 404, body: Data("not found: \(relPath)".utf8))
+        }
+        do {
+            let data = try Data(contentsOf: fileURL)
+            return SyncResponse(status: 200, body: data, contentType: Self.mimeType(for: relPath))
+        } catch {
+            return SyncResponse(status: 500, body: Data("read error".utf8))
+        }
+    }
+
+    private static func mimeType(for path: String) -> String {
+        let ext = (path as NSString).pathExtension.lowercased()
+        switch ext {
+        case "html": return "text/html; charset=utf-8"
+        case "css":  return "text/css; charset=utf-8"
+        case "js":   return "application/javascript; charset=utf-8"
+        case "json": return "application/json; charset=utf-8"
+        case "png":  return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "svg":  return "image/svg+xml"
+        case "ico":  return "image/x-icon"
+        case "webmanifest": return "application/manifest+json"
+        default:     return "application/octet-stream"
         }
     }
 
@@ -290,12 +352,12 @@ final class SyncServer {
 
     private func jsonOk(_ obj: [String: Any]) -> SyncResponse {
         let data = (try? JSONSerialization.data(withJSONObject: obj, options: [.sortedKeys])) ?? Data("{}".utf8)
-        return SyncResponse(status: 200, body: data)
+        return SyncResponse(status: 200, body: data, contentType: "application/json; charset=utf-8")
     }
 
     private func jsonErr(_ code: Int, _ msg: String) -> SyncResponse {
         let data = (try? JSONSerialization.data(withJSONObject: ["error": msg])) ?? Data("{}".utf8)
-        return SyncResponse(status: code, body: data)
+        return SyncResponse(status: code, body: data, contentType: "application/json; charset=utf-8")
     }
 
     private func unauthorized() -> SyncResponse {
@@ -306,9 +368,10 @@ final class SyncServer {
         let body = resp.body
         let headers = [
             "HTTP/1.1 \(resp.status) \(httpStatusText(resp.status))",
-            "Content-Type: application/json; charset=utf-8",
+            "Content-Type: \(resp.contentType)",
             "Content-Length: \(body.count)",
             "Access-Control-Allow-Origin: *",
+            "Cache-Control: no-cache",
             "Connection: close",
             ""
         ].joined(separator: "\r\n")
@@ -343,4 +406,5 @@ struct SyncRequest {
 struct SyncResponse {
     let status: Int
     let body: Data
+    var contentType: String = "application/json; charset=utf-8"
 }

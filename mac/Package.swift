@@ -14,7 +14,8 @@ let package = Package(
             name: "FlashNote",
             path: "Sources/FlashNote",
             resources: [
-                .copy("Resources/icon-1024.png")
+                .copy("Resources/icon-1024.png"),
+                .copy("Resources/web")
             ]
         )
     ]

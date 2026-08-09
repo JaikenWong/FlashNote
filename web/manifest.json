@@ -1,0 +1,19 @@
+{
+  "name": "闪记 FlashNote",
+  "short_name": "闪记",
+  "description": "快速记录工具，文字笔记 + 简单账目",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#52C41A",
+  "background_color": "#FAFAFA",
+  "icons": [
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
