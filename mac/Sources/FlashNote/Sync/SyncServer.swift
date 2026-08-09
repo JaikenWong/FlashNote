@@ -93,14 +93,12 @@ final class SyncServer {
                 return
             }
             if let data = data, !data.isEmpty {
-                NSLog("[SyncServer] got %d bytes", data.count)
                 if state.request.method == nil {
                     state.headerBuf.append(data)
                     if let range = state.headerBuf.range(of: Data("\r\n\r\n".utf8)) {
                         let headerData = state.headerBuf.subdata(in: 0..<range.lowerBound)
                         let rest = state.headerBuf.subdata(in: range.upperBound..<state.headerBuf.count)
                         state.request = Self.parseRequest(headerData) ?? state.request
-                        NSLog("[SyncServer] parsed method=%@ path=%@", state.request.method ?? "nil", state.request.path)
                         if let cl = state.request.headers["content-length"], let n = Int(cl) {
                             state.bodyTarget = n
                             state.bodyBuf.append(rest)

@@ -29,7 +29,6 @@ final class SyncCoordinator: ObservableObject {
 
     func start() {
         guard !isRunning else { return }
-        NSLog("[SyncCoordinator] start() called")
         let store = self.store
         let server = SyncServer(
             port: port,
@@ -43,15 +42,11 @@ final class SyncCoordinator: ObservableObject {
         )
         let advertiser = MDNSAdvertiser(port: port)
         do {
-            NSLog("[SyncCoordinator] starting server...")
             try server.start()
-            NSLog("[SyncCoordinator] server started")
             try advertiser.start()
-            NSLog("[SyncCoordinator] advertiser started")
             self.server = server
             self.advertiser = advertiser
             self.isRunning = true
-            NSLog("[SyncCoordinator] started on port \(port) · code=\(currentPairCode)")
         } catch {
             NSLog("[SyncCoordinator] failed: %@", String(describing: error))
         }
