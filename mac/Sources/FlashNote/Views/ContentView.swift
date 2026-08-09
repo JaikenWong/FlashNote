@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showExport = false
     @State private var lastInserted: Record?
     @State private var mainView: MainViewKind = .cards
+    @State private var editingRecord: Record? = nil
 
     enum MainViewKind { case cards, stats }
 
@@ -34,6 +35,15 @@ struct ContentView: View {
         .overlay {
             if showQuickRecord {
                 QuickRecordModal(store: store, isOpen: $showQuickRecord)
+                    .onAppear {
+                        if let r = editingRecord {
+                            NotificationCenter.default.post(
+                                name: .flashnoteEditRecord,
+                                object: r
+                            )
+                            editingRecord = nil
+                        }
+                    }
             }
             if showSyncSettings {
                 SyncSettingsModal(sync: sync, isOpen: $showSyncSettings)
@@ -44,6 +54,7 @@ struct ContentView: View {
         }
         // Cmd+N 唤起快速记录
         .onReceive(NotificationCenter.default.publisher(for: .flashnoteToggleQuickRecord)) { _ in
+            editingRecord = nil
             showQuickRecord.toggle()
         }
     }
@@ -120,7 +131,10 @@ struct ContentView: View {
 
             // 主体
             switch mainView {
-            case .cards:  CardListView(store: store)
+            case .cards:  CardListView(store: store, onEdit: { r in
+                editingRecord = r
+                showQuickRecord = true
+            })
             case .stats:  StatsView(store: store)
             }
         }
@@ -269,4 +283,5 @@ struct SyncSettingsModal: View {
 
 extension Notification.Name {
     static let flashnoteToggleQuickRecord = Notification.Name("FlashNote.toggleQuickRecord")
+    static let flashnoteEditRecord = Notification.Name("FlashNote.editRecord")
 }

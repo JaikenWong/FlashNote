@@ -70,6 +70,14 @@ final class RecordStore: ObservableObject {
         if changed { save() }
     }
 
+    /// 本地编辑：替换一条记录
+    func replace(_ old: Record, with new: Record) {
+        if let idx = records.firstIndex(where: { $0.id == old.id }) {
+            records[idx] = new
+            save()
+        }
+    }
+
     // MARK: - 过滤 / 查询
 
     var visibleRecords: [Record] {

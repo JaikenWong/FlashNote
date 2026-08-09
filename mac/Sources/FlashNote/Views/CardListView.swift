@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CardListView: View {
     @ObservedObject var store: RecordStore
+    var onEdit: (Record) -> Void = { _ in }
 
     var body: some View {
         ScrollView {
@@ -12,9 +13,12 @@ struct CardListView: View {
                     ForEach(groupedByMonth, id: \.month) { group in
                         MonthGroupView(month: group.month, sum: group.sum, count: group.count) {
                             ForEach(group.records) { record in
-                                CardView(record: record) {
-                                    store.delete(record)
-                                }
+                                CardView(
+                                    record: record,
+                                    onDelete: { store.delete(record) },
+                                    onEdit: { onEdit(record) },
+                                    onTagClick: { tag in store.filter = .tag(tag) }
+                                )
                             }
                         }
                     }

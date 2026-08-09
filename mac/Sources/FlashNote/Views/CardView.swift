@@ -3,6 +3,8 @@ import SwiftUI
 struct CardView: View {
     let record: Record
     var onDelete: () -> Void = {}
+    var onEdit: () -> Void = {}
+    var onTagClick: (String) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -19,11 +21,15 @@ struct CardView: View {
                     Text(String(format: "¥%.2f", amount))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(Theme.warn)
-                        .fontWeight(.semibold)
                     Text("·").foregroundColor(Theme.text4)
                 }
                 ForEach(record.tags, id: \.self) { tag in
-                    TagChip(name: tag)
+                    Button {
+                        onTagClick(tag)
+                    } label: {
+                        TagChip(name: tag)
+                    }
+                    .buttonStyle(.plain)
                 }
                 Spacer()
                 Text(relativeTime(record.createdAt))
@@ -43,7 +49,6 @@ struct CardView: View {
             // 左侧 3px 竖条
             HStack {
                 if record.type == .expense {
-                    // 虚线效果
                     VStack(spacing: 3) {
                         ForEach(0..<8, id: \.self) { _ in
                             Rectangle()
@@ -51,7 +56,6 @@ struct CardView: View {
                                 .frame(width: 3, height: 4)
                         }
                     }
-                    .padding(.leading, 0)
                 } else {
                     Rectangle()
                         .fill(Theme.green)
@@ -62,6 +66,18 @@ struct CardView: View {
             .padding(.vertical, 12)
         }
         .contextMenu {
+            Button {
+                onEdit()
+            } label: {
+                Label("编辑", systemImage: "pencil")
+            }
+            Button {
+                onTagClick(record.tags.first ?? "")
+            } label: {
+                Label("筛选第一个标签", systemImage: "tag")
+            }
+            .disabled(record.tags.isEmpty)
+            Divider()
             Button(role: .destructive) {
                 onDelete()
             } label: {
