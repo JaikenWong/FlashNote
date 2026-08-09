@@ -12,8 +12,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "FlashNote",
-            path: "Sources/FlashNote"
+            path: "Sources/FlashNote",
+            resources: [
+                .copy("Resources/icon-1024.png")
+            ]
         )
-        // 注：测试放在 Xcode 工程里更稳（SwiftPM 在 CLI toolchain 下偶发 XCTest 找不到）
     ]
 )

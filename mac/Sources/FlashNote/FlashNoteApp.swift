@@ -37,6 +37,11 @@ struct FlashNoteApp: App {
 /// 保留一个 AppDelegate 钩子，方便 M3 同步层挂服务
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 设置 app icon（从 bundle 资源加载）
+        if let url = Bundle.module.url(forResource: "icon-1024", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            NSApp.applicationIconImage = image
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
     }
