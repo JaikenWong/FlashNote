@@ -10,6 +10,16 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/images/icon-512.png" />
   <link rel="apple-touch-icon" href="/images/icon-512.png" />
+  <!-- iOS PWA 启动图（从桌面打开时不再白屏） -->
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px)" href="/images/splash/splash-1125x2436.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px)" href="/images/splash/splash-1170x2532.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px)" href="/images/splash/splash-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px)" href="/images/splash/splash-1206x2622.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px)" href="/images/splash/splash-1242x2688.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px)" href="/images/splash/splash-1284x2778.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px)" href="/images/splash/splash-1290x2796.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px)" href="/images/splash/splash-1320x2868.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px)" href="/images/splash/splash-750x1334.png">
   <title>闪记</title>
   <link rel="stylesheet" href="/css/app.css" />
 </head>
@@ -70,6 +80,10 @@
 
     <!-- 底部输入条 -->
     <footer class="quick-input">
+      <div class="install-hint" id="installHint" hidden>
+        <span class="install-text">💡 添加到主屏幕，用起来更像 App</span>
+        <span class="install-close" id="installClose" aria-label="关闭">×</span>
+      </div>
       <div class="preview" id="preview" hidden>
         <span class="preview-amount" id="previewAmount"></span>
         <span class="preview-tags" id="previewTags"></span>

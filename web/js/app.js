@@ -50,6 +50,8 @@ const editDel = $('editDel');
 const searchInput = $('searchInput');
 const searchClear = $('searchClear');
 const noMatchEl = $('noMatch');
+const installHint = $('installHint');
+const installClose = $('installClose');
 
 // ===== 初始化 =====
 const deviceId = getOrCreateDeviceId();
@@ -100,6 +102,18 @@ editSave.addEventListener('click', saveEdit);
 editText.addEventListener('input', renderEditPreview);
 editMask.addEventListener('click', e => {
   if (e.target === editMask) closeEdit();   // 点遮罩关闭
+});
+
+// 「添加到主屏幕」一次性引导（iOS Safari 没有自动提示）
+// standalone（已加到主屏幕）或用户关过 → 不再显示
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+if (!isStandalone && !localStorage.getItem('fn_install_dismissed')) {
+  installHint.hidden = false;
+}
+installClose.addEventListener('click', () => {
+  installHint.hidden = true;
+  localStorage.setItem('fn_install_dismissed', '1');
 });
 
 // 网络状态：监听 online/offline 自动重试
@@ -350,7 +364,8 @@ function renderList(rs) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86400000);
-  const weekStart = new Date(today.getTime() - 6 * 86400000);  // 本周 = 今天 + 前 6 天
+  // 本周 = 周日-周六 的自然周（getDay(): 0=周日），不是滚动 7 天
+  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
   const yearStart = new Date(now.getFullYear(), 0, 1);
 
   for (const r of sorted) {

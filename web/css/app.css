@@ -289,6 +289,32 @@ body {
   border-top: 1px solid var(--c-border);
   padding: 12px 16px calc(12px + var(--safe-bottom));
 }
+/* 「添加到主屏幕」一次性引导 */
+.install-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--c-green-soft);
+  border: 1px solid var(--c-green-faint);
+  border-radius: 10px;
+  padding: 8px 10px 8px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--c-green-deep);
+  animation: slideUp .2s ease-out;
+}
+.install-hint[hidden] { display: none; }
+.install-close {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--c-green-deep);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
 .quick-input .preview {
   display: flex;
   align-items: center;
@@ -325,7 +351,7 @@ body {
   background: var(--c-page);
   border-radius: 22px;
   padding: 0 18px;
-  font-size: 15px;
+  font-size: 16px; /* ≥16px 防止 iOS 聚焦自动放大 */
   outline: none;
   transition: border-color .15s, background .15s;
   font-family: inherit;
@@ -654,7 +680,7 @@ body {
   border-radius: 10px;
   padding: 12px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px; /* ≥16px 防止 iOS 聚焦自动放大 */
   line-height: 1.5;
   resize: none;
   background: var(--c-page);
@@ -756,7 +782,7 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px; /* ≥16px 防止 iOS 聚焦自动放大 */
   color: var(--c-text-1);
   outline: none;
   transition: background .15s;
