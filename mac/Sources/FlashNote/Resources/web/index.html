@@ -28,12 +28,37 @@
       </div>
     </header>
 
+    <!-- 搜索条 -->
+    <div class="search-bar" id="searchBar">
+      <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      <input
+        class="search-input"
+        id="searchInput"
+        type="search"
+        placeholder="搜 content / #标签 / 金额"
+        autocomplete="off"
+        enterkeyhint="search"
+      />
+      <button class="search-clear" id="searchClear" hidden aria-label="清除">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- 卡片流 -->
     <main class="main" id="main">
       <div class="empty" id="empty">
         <div class="emoji">📝</div>
         <div>还没有记录</div>
         <div class="hint">试试在底部输入 <code>午饭 28 #餐</code></div>
+      </div>
+      <div class="no-match" id="noMatch" hidden>
+        <div class="emoji">🔍</div>
+        <div>没找到匹配</div>
+        <div class="hint">试试别的关键词</div>
       </div>
       <div class="list" id="list"></div>
     </main>

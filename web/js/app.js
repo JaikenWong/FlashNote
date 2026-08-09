@@ -13,6 +13,7 @@ import { compute as computeStats, render as renderStatsHtml } from './stats.js';
 // 状态
 let draft = '';
 let records = [];
+let searchQuery = '';
 
 // DOM
 const $ = id => document.getElementById(id);
@@ -46,6 +47,9 @@ const editClose = $('editClose');
 const editCancel = $('editCancel');
 const editSave = $('editSave');
 const editDel = $('editDel');
+const searchInput = $('searchInput');
+const searchClear = $('searchClear');
+const noMatchEl = $('noMatch');
 
 // ===== 初始化 =====
 const deviceId = getOrCreateDeviceId();
@@ -74,6 +78,20 @@ syncPill.addEventListener('click', () => doSync(true));
 tabList.addEventListener('click', () => switchTab('list'));
 tabStats.addEventListener('click', () => switchTab('stats'));
 
+// 搜索
+searchInput.addEventListener('input', e => {
+  searchQuery = e.target.value;
+  searchClear.hidden = !searchQuery;
+  render();
+});
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  searchClear.hidden = true;
+  render();
+  searchInput.focus();
+});
+
 // 编辑浮层
 editClose.addEventListener('click', closeEdit);
 editCancel.addEventListener('click', closeEdit);
@@ -84,8 +102,15 @@ editMask.addEventListener('click', e => {
   if (e.target === editMask) closeEdit();   // 点遮罩关闭
 });
 
-// 网络恢复后自动同步
-window.addEventListener('online', () => doSync(false));
+// 网络状态：监听 online/offline 自动重试
+window.addEventListener('online', () => {
+  console.log('[闪记] network online, retry sync');
+  if (isPaired()) doSync(false);
+});
+window.addEventListener('offline', () => {
+  console.log('[闪记] network offline');
+  setSyncState('offline', '离线 · 待重试');
+});
 
 // 配对 UI
 pairBtn.addEventListener('click', doPair);
@@ -165,13 +190,34 @@ function refresh() {
 }
 
 function render() {
+  const filtered = filterRecords(records, searchQuery);
   if (records.length === 0) {
     listEl.innerHTML = '';
     emptyEl.style.display = '';
+    noMatchEl.hidden = true;
     return;
   }
   emptyEl.style.display = 'none';
-  listEl.innerHTML = renderList(records);
+  if (filtered.length === 0) {
+    listEl.innerHTML = '';
+    noMatchEl.hidden = false;
+    return;
+  }
+  noMatchEl.hidden = true;
+  listEl.innerHTML = renderList(filtered);
+}
+
+/** 搜索过滤：content / tags / amount */
+function filterRecords(rs, q) {
+  if (!q) return rs;
+  const ql = q.toLowerCase().trim();
+  if (!ql) return rs;
+  return rs.filter(r => {
+    if ((r.content || '').toLowerCase().includes(ql)) return true;
+    if ((r.tags || []).some(t => t.toLowerCase().includes(ql))) return true;
+    if (r.amount != null && String(r.amount).includes(ql)) return true;
+    return false;
+  });
 }
 
 // ===== Tab 切换 =====
@@ -312,7 +358,7 @@ function renderList(rs) {
 
 function renderCard(r) {
   const isExp = r.type === 'expense';
-  const tagsHtml = r.tags.map(t => `<span class="tag-chip">#${escapeHtml(t)}</span>`).join('');
+  const tagsHtml = r.tags.map(t => `<button class="tag-chip" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('');
   const amountHtml = r.amount ? `<span class="amount">¥${r.amount.toFixed(2)}</span><span class="sep">·</span>` : '';
   const time = relTime(r.createdAt);
   return `
@@ -327,15 +373,65 @@ function renderCard(r) {
   `;
 }
 
-listEl.addEventListener('click', e => {
+// 长按删除：pointerdown 启动 800ms 计时，到时间才删除；中途松开取消
+const LONG_PRESS_MS = 800;
+let pressTimer = null;
+let pressingBtn = null;
+
+function startLongPress(btn) {
+  cancelLongPress();
+  btn.classList.add('pressing');
+  pressingBtn = btn;
+  pressTimer = setTimeout(() => {
+    const id = btn.dataset.id;
+    btn.classList.remove('pressing');
+    pressingBtn = null;
+    pressTimer = null;
+    softDelete(id, deviceId);
+    refresh();
+    doSync(false);
+    // 轻提示
+    showToast('已删除');
+  }, LONG_PRESS_MS);
+}
+function cancelLongPress() {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  if (pressingBtn) { pressingBtn.classList.remove('pressing'); pressingBtn = null; }
+}
+
+listEl.addEventListener('pointerdown', e => {
   const delBtn = e.target.closest('[data-act="del"]');
   if (delBtn) {
-    const id = delBtn.dataset.id;
-    if (confirm('删除这条记录？')) {
-      softDelete(id, deviceId);
-      refresh();
-      doSync(false);
+    e.stopPropagation();
+    e.preventDefault();  // 阻止 iOS Safari 的「长按弹出菜单」
+    startLongPress(delBtn);
+  }
+});
+['pointerup', 'pointerleave', 'pointercancel', 'pointerout'].forEach(ev => {
+  listEl.addEventListener(ev, e => {
+    if (pressingBtn && (e.target === pressingBtn || pressingBtn.contains(e.target))) {
+      cancelLongPress();
     }
+  });
+});
+
+listEl.addEventListener('click', e => {
+  // 阻止长按后 click 冒泡触发其他逻辑
+  if (e.target.closest('[data-act="del"]')) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+  // 点标签 chip → 触发搜索（不打开编辑）
+  const tagBtn = e.target.closest('.tag-chip');
+  if (tagBtn) {
+    e.stopPropagation();
+    const t = tagBtn.dataset.tag;
+    searchInput.value = t;
+    searchQuery = t;
+    searchClear.hidden = false;
+    render();
+    searchInput.focus();
     return;
   }
   // 点卡片本体（不在删除按钮上）→ 打开编辑
@@ -385,6 +481,10 @@ function submit() {
 
 // ===== 同步 =====
 async function doSync(manual) {
+  if (!navigator.onLine) {
+    setSyncState('offline', '离线 · 待重试');
+    return;
+  }
   setSyncState('syncing');
   try {
     const result = await syncOnce(deviceId);
@@ -392,21 +492,20 @@ async function doSync(manual) {
     refresh();
   } catch (e) {
     console.warn('[闪记] sync failed', e);
-    setSyncState('error', e.message || '同步失败');
+    // 失败时区分：网络层错（fetch 拒绝）→ offline；其他（401、500）→ error
+    const isNetwork = /failed to fetch|networkerror|abort/i.test(e.message || '');
+    if (isNetwork || !navigator.onLine) {
+      setSyncState('offline', '离线 · 待重试');
+    } else {
+      setSyncState('error', e.message || '同步失败');
+    }
   }
 }
 
 function setSyncState(state, text) {
+  // synced 状态保持空 class（绿色默认）；其他状态加 class
   syncPill.className = 'sync-pill ' + (state === 'synced' ? '' : state);
-  if (state === 'synced' && text) {
-    syncText.textContent = text;
-  } else if (state === 'syncing') {
-    syncText.textContent = '同步中…';
-  } else if (state === 'error') {
-    syncText.textContent = text || '同步失败';
-  } else {
-    syncText.textContent = '本地';
-  }
+  syncText.textContent = text || state;
 }
 
 // ===== 工具 =====
@@ -414,6 +513,19 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
+}
+
+// ====== Toast 提示 ======
+let toastTimer = null;
+function showToast(msg) {
+  // 移除旧的
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  if (toastTimer) clearTimeout(toastTimer);
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  toastTimer = setTimeout(() => el.remove(), 1900);
 }
 
 function relTime(iso) {
