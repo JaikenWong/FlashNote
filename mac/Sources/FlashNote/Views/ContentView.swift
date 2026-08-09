@@ -2,7 +2,9 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: RecordStore
+    @EnvironmentObject var sync: SyncCoordinator
     @State private var showQuickRecord = false
+    @State private var showSyncSettings = false
     @State private var lastInserted: Record?
 
     var body: some View {
@@ -26,6 +28,9 @@ struct ContentView: View {
         .overlay {
             if showQuickRecord {
                 QuickRecordModal(store: store, isOpen: $showQuickRecord)
+            }
+            if showSyncSettings {
+                SyncSettingsModal(sync: sync, isOpen: $showSyncSettings)
             }
         }
         // Cmd+N 唤起快速记录
@@ -68,8 +73,13 @@ struct ContentView: View {
 
                 Spacer()
 
-                // 同步状态（M3 实装，先占位）
-                SyncStatusPill(state: .local)
+                // 同步状态 pill
+                Button {
+                    showSyncSettings = true
+                } label: {
+                    SyncStatusPill(state: sync.isRunning ? .synced : .local, code: sync.currentPairCode)
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .frame(height: 48)
@@ -84,11 +94,12 @@ struct ContentView: View {
     }
 }
 
-/// 同步状态（M3 实装，目前只显示本地）
-enum SyncState { case local, syncing, synced, error(String) }
+/// 同步状态
+enum SyncState: Equatable { case local, syncing, synced, error(String) }
 
 struct SyncStatusPill: View {
     let state: SyncState
+    var code: String? = nil
 
     var body: some View {
         HStack(spacing: 6) {
@@ -97,6 +108,14 @@ struct SyncStatusPill: View {
                 .frame(width: 6, height: 6)
             Text(text)
                 .font(.system(size: 11, weight: .medium))
+            if let code = code, state == .synced {
+                Text("·")
+                    .foregroundColor(Theme.text3)
+                Text(code)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .tracking(2)
+                    .foregroundColor(Theme.greenDeep)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
@@ -109,8 +128,8 @@ struct SyncStatusPill: View {
     private var text: String {
         switch state {
         case .local:   return "本地"
-        case .syncing: return "同步中…"
-        case .synced:  return "已同步"
+        case .syncing: return "局域网 · 配对码"
+        case .synced:  return "局域网"
         case .error:   return "同步失败"
         }
     }
@@ -131,6 +150,87 @@ struct SyncStatusPill: View {
         case .synced:  return Theme.greenSoft
         case .error:   return Color(red: 1.0, green: 0.93, blue: 0.93)
         }
+    }
+}
+
+/// 同步设置浮层（M3）
+struct SyncSettingsModal: View {
+    @ObservedObject var sync: SyncCoordinator
+    @Binding var isOpen: Bool
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.08).ignoresSafeArea()
+                .onTapGesture { isOpen = false }
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("局域网同步")
+                        .font(.system(size: 16, weight: .semibold))
+                    Spacer()
+                    Button("关闭") { isOpen = false }
+                        .buttonStyle(.plain)
+                        .foregroundColor(Theme.text3)
+                }
+
+                // 配对码大数字
+                VStack(spacing: 4) {
+                    Text("在微信小程序「闪记」中输入配对码")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.text2)
+                    Text(formatCode(sync.currentPairCode))
+                        .font(.system(size: 36, weight: .semibold, design: .monospaced))
+                        .tracking(8)
+                        .foregroundColor(Theme.greenDeep)
+                    Text("端口 9527 · 需在同一 WiFi 下")
+                        .font(.system(size: 11))
+                        .foregroundColor(Theme.text3)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Theme.greenSoft)
+                )
+
+                HStack {
+                    Circle()
+                        .fill(sync.isRunning ? Theme.green : Theme.text4)
+                        .frame(width: 8, height: 8)
+                    Text(sync.isRunning ? "HTTP server + mDNS 已启动" : "未启动")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.text2)
+                    Spacer()
+                }
+
+                HStack(spacing: 8) {
+                    Button {
+                        sync.regenerateCode()
+                    } label: {
+                        Text("重新生成配对码")
+                            .font(.system(size: 13))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Theme.border2, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(20)
+            .frame(width: 440)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.16), radius: 24, x: 0, y: 8)
+            )
+        }
+    }
+
+    private func formatCode(_ c: String) -> String {
+        c.map { String($0) }.joined(separator: " ")
     }
 }
 

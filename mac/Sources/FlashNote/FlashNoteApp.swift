@@ -4,17 +4,26 @@ import AppKit
 @main
 struct FlashNoteApp: App {
     @StateObject private var store = RecordStore()
+    @StateObject private var sync: SyncCoordinator
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
+    init() {
+        let store = RecordStore()
+        let sync = SyncCoordinator(store: store)
+        _store = StateObject(wrappedValue: store)
+        _sync = StateObject(wrappedValue: sync)
+    }
 
     var body: some Scene {
         WindowGroup("闪记") {
             ContentView()
                 .environmentObject(store)
+                .environmentObject(sync)
+                .onAppear { sync.start() }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
         .commands {
-            // 用菜单栏 File → New 触发快速记录
             CommandGroup(replacing: .newItem) {
                 Button("快速记录") {
                     NotificationCenter.default.post(name: .flashnoteToggleQuickRecord, object: nil)

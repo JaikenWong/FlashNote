@@ -53,6 +53,23 @@ final class RecordStore: ObservableObject {
         save()
     }
 
+    /// 远端同步过来的记录合并：LWW
+    func mergeFromRemote(_ incoming: [Record]) {
+        var changed = false
+        for r in incoming {
+            if let idx = records.firstIndex(where: { $0.id == r.id }) {
+                if r.updatedAt > records[idx].updatedAt {
+                    records[idx] = r
+                    changed = true
+                }
+            } else {
+                records.append(r)
+                changed = true
+            }
+        }
+        if changed { save() }
+    }
+
     // MARK: - 过滤 / 查询
 
     var visibleRecords: [Record] {
