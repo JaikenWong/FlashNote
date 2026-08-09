@@ -18,6 +18,10 @@
     <!-- 顶部 -->
     <header class="topbar">
       <h1 class="title">闪记</h1>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="list" id="tabList">记录</button>
+        <button class="tab" data-tab="stats" id="tabStats">统计</button>
+      </div>
       <div class="sync-pill" id="syncPill" title="点击立即同步">
         <span class="dot"></span>
         <span class="text" id="syncText">本地</span>
@@ -32,6 +36,11 @@
         <div class="hint">试试在底部输入 <code>午饭 28 #餐</code></div>
       </div>
       <div class="list" id="list"></div>
+    </main>
+
+    <!-- 统计页 -->
+    <main class="main stats-main" id="statsMain" hidden>
+      <div id="statsContent"></div>
     </main>
 
     <!-- 底部输入条 -->

@@ -8,6 +8,7 @@ import {
   getToken, setToken, clearToken, isPaired
 } from './storage.js';
 import { getInfo, syncOnce, pair as pairRequest } from './sync.js';
+import { compute as computeStats, render as renderStatsHtml } from './stats.js';
 
 // 状态
 let draft = '';
@@ -30,6 +31,11 @@ const pairInput = $('pairInput');
 const pairBtn = $('pairBtn');
 const pairSkip = $('pairSkip');
 const pairError = $('pairError');
+const tabList = $('tabList');
+const tabStats = $('tabStats');
+const mainEl = $('main');
+const statsMainEl = $('statsMain');
+const statsContentEl = $('statsContent');
 
 // ===== 初始化 =====
 const deviceId = getOrCreateDeviceId();
@@ -53,6 +59,10 @@ inputEl.addEventListener('keydown', e => {
 });
 sendBtn.addEventListener('click', submit);
 syncPill.addEventListener('click', () => doSync(true));
+
+// Tab 切换
+tabList.addEventListener('click', () => switchTab('list'));
+tabStats.addEventListener('click', () => switchTab('stats'));
 
 // 网络恢复后自动同步
 window.addEventListener('online', () => doSync(false));
@@ -131,6 +141,7 @@ async function doPair() {
 function refresh() {
   records = loadAll().filter(r => !r.deleted);
   render();
+  renderStats();
 }
 
 function render() {
@@ -141,6 +152,31 @@ function render() {
   }
   emptyEl.style.display = 'none';
   listEl.innerHTML = renderList(records);
+}
+
+// ===== Tab 切换 =====
+let currentTab = 'list';
+function switchTab(tab) {
+  if (tab === currentTab) return;
+  currentTab = tab;
+  if (tab === 'list') {
+    tabList.classList.add('active');
+    tabStats.classList.remove('active');
+    mainEl.hidden = false;
+    statsMainEl.hidden = true;
+  } else {
+    tabStats.classList.add('active');
+    tabList.classList.remove('active');
+    mainEl.hidden = true;
+    statsMainEl.hidden = false;
+    renderStats();
+  }
+}
+
+// ===== 统计渲染 =====
+function renderStats() {
+  const stats = computeStats(records);
+  statsContentEl.innerHTML = renderStatsHtml(stats);
 }
 
 function renderList(rs) {

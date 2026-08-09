@@ -91,6 +91,33 @@ body {
 .sync-pill.error { background: #FFF1F0; color: #CF1322; }
 .sync-pill.error .dot { background: #FF4D4F; }
 
+/* ====== 顶栏 Tab（记录 / 统计） ====== */
+.tabs {
+  display: inline-flex;
+  background: var(--c-page);
+  border-radius: 999px;
+  padding: 2px;
+  border: 1px solid var(--c-border);
+}
+.tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-3);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab.active {
+  background: var(--c-bg);
+  color: var(--c-green-deep);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.tab:active { transform: scale(0.97); }
+
 /* ====== 主区 ====== */
 .main {
   flex: 1;
@@ -393,4 +420,164 @@ body {
   font-size: 13px;
   padding: 8px;
   cursor: pointer;
+}
+
+/* ====== 统计页 ====== */
+.stats-main { padding: 16px 16px 24px; }
+.stats-month {
+  font-size: 13px;
+  color: var(--c-text-3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.big-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.big-card {
+  background: var(--c-bg);
+  border-radius: var(--r-card);
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.big-label {
+  font-size: 11px;
+  color: var(--c-text-3);
+  margin-bottom: 4px;
+}
+.big-value {
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-1);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.big-sub {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.stats-section { margin-bottom: 16px; }
+.section-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
+
+.cat-card, .week-card, .tags-card {
+  background: var(--c-bg);
+  border-radius: var(--r-card);
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.cat-card {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.donut-wrap { flex: 0 0 110px; }
+.cat-list { flex: 1; min-width: 0; }
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.cat-dot {
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.cat-name { flex: 1; color: var(--c-text-1); }
+.cat-amount {
+  color: var(--c-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.week-bars {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  height: 100px;
+}
+.week-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+.bar-track {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.bar-fill {
+  width: 70%;
+  max-width: 28px;
+  background: var(--c-green-soft);
+  border-radius: 3px;
+  min-height: 4px;
+  transition: height .3s;
+}
+.bar-fill.today { background: var(--c-green); }
+.bar-label {
+  font-size: 10px;
+  color: var(--c-text-3);
+}
+.bar-label.today { color: var(--c-green-deep); font-weight: 500; }
+
+.tags-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--c-green-soft);
+  color: var(--c-green-deep);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--r-chip);
+}
+.tag-count {
+  font-size: 10px;
+  color: var(--c-text-3);
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+}
+
+.stats-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--c-text-3);
+}
+.stats-empty .emoji { font-size: 48px; margin-bottom: 12px; }
+.stats-empty .hint {
+  font-size: 12px;
+  color: var(--c-text-4);
+  margin-top: 8px;
+}
+.stats-empty code {
+  background: var(--c-page);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--c-text-2);
 }
