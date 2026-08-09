@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Swift / Xcode
+.build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.build/
+
+# IDE
+.vscode/
+.idea/
+
+# Preview
+prototype/preview*.png
+prototype/_archive/

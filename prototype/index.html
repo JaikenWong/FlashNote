@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>闪记 FlashNote · 设计原型</title>
+<style>
+  /* ============ 设计令牌 ============ */
+  :root {
+    /* 色板 */
+    --c-green:        #52C41A;
+    --c-green-soft:   #F6FFED;
+    --c-green-deep:   #389E0D;
+    --c-green-faint:  #E8F5D8;
+    --c-bg:           #FFFFFF;
+    --c-page:         #FAFAFA;
+    --c-text-1:       #1F1F1F;
+    --c-text-2:       #595959;
+    --c-text-3:       #8C8C8C;
+    --c-text-4:       #BFBFBF;
+    --c-border:       #F0F0F0;
+    --c-border-2:     #E8E8E8;
+    --c-warn:         #FAAD14;
+    --c-warn-soft:    #FFF7E6;
+    --c-danger:       #FF4D4F;
+    --c-shadow:       0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --c-shadow-lg:    0 4px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+
+    /* 字体 */
+    --f-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+              "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    --f-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+    /* 间距 */
+    --r-card: 12px;
+    --r-btn:  8px;
+    --r-chip: 6px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--f-sans);
+    background: var(--c-page);
+    color: var(--c-text-1);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+  }
+
+  /* ============ 顶部标题区 ============ */
+  .hero {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 64px 48px 32px;
+  }
+  .hero .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--c-green-soft);
+    color: var(--c-green-deep);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-green);
+  }
+  .hero h1 {
+    font-size: 44px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .hero .sub {
+    color: var(--c-text-2);
+    font-size: 16px;
+    max-width: 640px;
+  }
+  .hero .meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    color: var(--c-text-3);
+    font-size: 13px;
+  }
+  .hero .meta span strong { color: var(--c-text-1); font-weight: 500; }
+
+  /* ============ 章节 ============ */
+  section {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 24px 48px 32px;
+  }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .sec-head h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .sec-head .en {
+    font-size: 12px;
+    color: var(--c-text-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: var(--f-mono);
+  }
+  .sec-head .desc {
+    color: var(--c-text-2);
+    font-size: 14px;
+  }
+
+  /* ============ 屏幕网格 ============ */
+  .screens {
+    display: grid;
+    gap: 32px;
+  }
+  .screens.mac  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .screens.mp   { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .screens.tok  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .screen {
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--c-shadow);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen .label {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #FCFCFC;
+  }
+  .label .name { font-size: 13px; font-weight: 500; }
+  .label .hint { font-size: 12px; color: var(--c-text-3); font-family: var(--f-mono); }
+
+  /* ============ Mac 窗口外壳 ============ */
+  .mac-window {
+    background: var(--c-bg);
+    min-height: 540px;
+    display: flex;
+    flex-direction: column;
+  }
+  .mac-titlebar {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--c-border);
+    gap: 8px;
+  }
+  .mac-titlebar .lights { display: flex; gap: 7px; }
+  .mac-titlebar .lights span {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-block;
+  }
+  .lights .r { background: #FF5F57; }
+  .lights .y { background: #FEBC2E; }
+  .lights .g { background: #28C840; }
+  .mac-titlebar .title {
+    flex: 1; text-align: center;
+    font-size: 12px; color: var(--c-text-3);
+  }
+  .mac-titlebar .right { width: 52px; }
+
+  .mac-body {
+    display: flex;
+    flex: 1;
+    min-height: 500px;
+  }
+  .mac-sidebar {
+    width: 200px;
+    border-right: 1px solid var(--c-border);
+    padding: 16px 12px;
+    background: #FCFCFC;
+  }
+  .sidebar-section { margin-bottom: 18px; }
+  .sidebar-section .title {
+    font-size: 11px;
+    color: var(--c-text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 8px 8px;
+    font-weight: 500;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--r-btn);
+    font-size: 13px;
+    color: var(--c-text-2);
+    cursor: default;
+  }
+  .nav-item .ico {
+    width: 16px; height: 16px; display: inline-flex;
+    align-items: center; justify-content: center;
+    color: var(--c-text-3);
+  }
+  .nav-item.active {
+    background: var(--c-green-soft);
+    color: var(--c-green-deep);
+    font-weight: 500;
+  }
+  .nav-item.active .ico { color: var(--c-green); }
+  .nav-item .count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--c-text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-item.active .count { color: var(--c-green-deep); }
+
+  .mac-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .mac-topbar {
+    height: 48px;
+    border-bottom: 1px solid var(--c-border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+  }
+  .search {
+    flex: 1;
+    height: 30px;
+    border-radius: var(--r-btn);
+    background: var(--c-page);
+    border: 1px solid var(--c-border);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+    color: var(--c-text-3);
+    font-size: 13px;
+  }
+  .search .kbd {
+    margin-left: auto;
+    padding: 1px 5px;
+    background: #fff;
+    border: 1px solid var(--c-border-2);
+    border-radius: 4px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--c-text-3);
+  }
+  .sync-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--c-text-2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--c-green-soft);
+    color: var(--c-green-deep);
+    font-weight: 500;
+  }
+  .sync-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--c-green);
+  }
+  .sync-pill.idle { background: #F5F5F5; color: var(--c-text-3); }
+  .sync-pill.idle .dot { background: var(--c-text-4); }
+
+  .mac-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px 24px 120px;
+    background: var(--c-page);
+  }
+  .month-group { margin-bottom: 28px; }
+  .month-group .h {
+    font-size: 12px;
+    color: var(--c-text-3);
+    font-weight: 500;
+    margin: 0 4px 12px;
+    letter-spacing: 0.04em;
+  }
+  .month-group .h .sum {
+    margin-left: 8px;
+    color: var(--c-text-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .month-group .h .sum strong { color: var(--c-green-deep); font-weight: 600; }
+
+  /* ============ 卡片 ============ */
+  .card {
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-card);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    position: relative;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .card:hover {
+    box-shadow: var(--c-shadow);
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--c-green);
+  }
+  .card.expense::before {
+    background: var(--c-warn);
+    border-left: 1px dashed var(--c-warn);
+    background: transparent;
+    border-right: 1px dashed var(--c-warn);
+    width: 0;
+  }
+  .card.expense { padding-left: 22px; }
+  .card.expense::after {
+    content: "";
+    position: absolute;
+    left: 8px; top: 16px; bottom: 16px;
+    width: 3px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--c-warn) 0 4px,
+      transparent 4px 7px
+    );
+  }
+  .card .text {
+    font-size: 14.5px;
+    color: var(--c-text-1);
+    line-height: 1.6;
+    margin: 0 0 10px;
+  }
+  .card .meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--c-text-3);
+  }
+  .card .meta .amount {
+    font-family: var(--f-sans);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c-warn);
+    margin-left: 4px;
+  }
+  .card .meta .sep { color: var(--c-text-4); }
+  .tag-chip {
+    display: inline-flex; align-items: center;
+    padding: 1px 8px;
+    background: var(--c-green-soft);
+    color: var(--c-green-deep);
+    border-radius: var(--r-chip);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+  .tag-chip.warm { background: var(--c-warn-soft); color: #D48806; }
+  .tag-chip.blue { background: #E6F4FF; color: #1677FF; }
+  .tag-chip.purple { background: #F9F0FF; color: #722ED1; }
+
+  /* ============ 快速输入 ============ */
+  .quick-input {
+    position: relative;
+    background: var(--c-bg);
+    border: 1px solid var(--c-green);
+    border-radius: var(--r-card);
+    box-shadow: 0 8px 32px rgba(82,196,26,0.12);
+    padding: 14px 16px 12px;
+  }
+  .quick-input .row1 {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .type-tabs {
+    display: inline-flex;
+    background: var(--c-page);
+    padding: 2px;
+    border-radius: var(--r-btn);
+  }
+  .type-tabs span {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    color: var(--c-text-2);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .type-tabs span.on {
+    background: #fff;
+    color: var(--c-green-deep);
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .quick-input .parse {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--c-text-1);
+    margin: 0;
+    min-height: 24px;
+    outline: none;
+  }
+  .quick-input .parse .tag  { color: var(--c-green-deep); font-weight: 500; }
+  .quick-input .parse .num  { color: var(--c-warn); font-weight: 600; }
+  .quick-input .hint {
+    margin-top: 8px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px;
+    color: var(--c-text-3);
+  }
+  .quick-input .hint .kbd {
+    font-family: var(--f-mono);
+    padding: 1px 5px;
+    border: 1px solid var(--c-border-2);
+    border-radius: 3px;
+    background: #fff;
+  }
+  .quick-input .submit {
+    margin-left: auto;
+    padding: 3px 10px;
+    background: var(--c-green);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* ============ Mac 浮动输入（覆盖在内容底部的全局） ============ */
+  .quick-input.global {
+    margin: 0 24px;
+    margin-top: -78px;
+    z-index: 5;
+    position: relative;
+  }
+
+  /* ============ 统计 ============ */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-card);
+    padding: 18px 20px;
+  }
+  .stat-card .lbl {
+    font-size: 12px;
+    color: var(--c-text-3);
+    margin: 0 0 6px;
+  }
+  .stat-card .big {
+    font-size: 30px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    color: var(--c-text-1);
+  }
+  .stat-card .big .u {
+    font-size: 14px; color: var(--c-text-3);
+    font-weight: 400; margin-left: 4px;
+  }
+  .stat-card .delta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--c-text-3);
+  }
+  .stat-card .delta.up { color: var(--c-warn); }
+  .stat-card .delta.down { color: var(--c-green-deep); }
+
+  .ring-wrap {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .ring {
+    --p: 0.62;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(var(--c-green) calc(var(--p)*1%),
+                               var(--c-border) 0);
+    position: relative;
+  }
+  .ring::after {
+    content: ""; position: absolute;
+    inset: 10px; background: #fff; border-radius: 50%;
+  }
+  .ring .v {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+    color: var(--c-text-1);
+    z-index: 1;
+  }
+  .cat-list { flex: 1; font-size: 12.5px; }
+  .cat-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 0;
+  }
+  .cat-row .dot {
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+  .cat-row .name { flex: 1; color: var(--c-text-1); }
+  .cat-row .v {
+    font-variant-numeric: tabular-nums;
+    color: var(--c-text-2);
+  }
+
+  /* ============ 同步 ============ */
+  .pair-card {
+    background: linear-gradient(135deg, var(--c-green-soft) 0%, #fff 100%);
+    border: 1px solid var(--c-green-faint);
+    border-radius: var(--r-card);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .pair-card .t1 { font-size: 12px; color: var(--c-text-2); margin: 0 0 4px; }
+  .pair-card .code {
+    font-size: 32px;
+    font-family: var(--f-mono);
+    font-weight: 600;
+    letter-spacing: 0.4em;
+    color: var(--c-green-deep);
+    margin: 8px 0 4px;
+  }
+  .pair-card .t2 { font-size: 11px; color: var(--c-text-3); margin: 0; }
+
+  .device-list { background: #fff; border: 1px solid var(--c-border); border-radius: var(--r-card); }
+  .device {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .device:last-child { border-bottom: 0; }
+  .device .ico {
+    width: 36px; height: 36px;
+    background: var(--c-green-soft);
+    color: var(--c-green-deep);
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .device .name { font-size: 13px; font-weight: 500; }
+  .device .sub  { font-size: 11px; color: var(--c-text-3); margin-top: 2px; }
+  .device .right { margin-left: auto; font-size: 12px; color: var(--c-text-3); }
+  .device .pill {
+    background: var(--c-green-soft); color: var(--c-green-deep);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px;
+    margin-left: 8px;
+  }
+
+  /* ============ 手机框 ============ */
+  .phone {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 36px;
+    border: 8px solid #1F1F1F;
+    box-shadow: var(--c-shadow-lg);
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 9/19.5;
+    display: flex; flex-direction: column;
+  }
+  .phone .notch {
+    height: 24px; background: #1F1F1F;
+    border-radius: 0 0 14px 14px;
+    width: 100px; margin: 0 auto;
+    position: relative; z-index: 2;
+  }
+  .phone .status {
+    height: 28px; padding: 0 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 600;
+    color: var(--c-text-1);
+    background: #fff;
+  }
+  .phone .status .right { display: flex; gap: 4px; align-items: center; }
+  .phone .screen-body {
+    flex: 1; overflow: hidden; display: flex; flex-direction: column;
+    background: var(--c-page);
+  }
+  .phone .tabbar {
+    height: 56px; background: #fff;
+    border-top: 1px solid var(--c-border);
+    display: flex;
+  }
+  .phone .tabbar .tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; font-size: 10px;
+    color: var(--c-text-3);
+  }
+  .phone .tabbar .tab.on { color: var(--c-green-deep); }
+  .phone .tabbar .tab svg { width: 18px; height: 18px; }
+  .phone .tabbar .add {
+    width: 44px; height: 44px;
+    margin: -16px auto 0;
+    background: var(--c-green);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(82,196,26,0.32);
+  }
+
+  /* mp 内容 */
+  .mp-top {
+    padding: 12px 14px 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .mp-top .title { font-size: 18px; font-weight: 600; }
+  .mp-top .right { margin-left: auto; }
+  .mp-search {
+    margin: 0 14px 8px;
+    height: 32px; background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+    padding: 0 12px; display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--c-text-3);
+  }
+  .mp-list {
+    flex: 1; overflow: auto;
+    padding: 0 12px 8px;
+  }
+  .mp-list .day { font-size: 11px; color: var(--c-text-3); margin: 10px 4px 6px; font-weight: 500; }
+  .mp-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--c-border);
+    position: relative;
+  }
+  .mp-card::before {
+    content: ""; position: absolute;
+    left: 0; top: 10px; bottom: 10px;
+    width: 3px; border-radius: 0 2px 2px 0;
+    background: var(--c-green);
+  }
+  .mp-card.expense::before { background: var(--c-warn); }
+  .mp-card .t { font-size: 13.5px; line-height: 1.5; color: var(--c-text-1); margin: 0 0 4px; }
+  .mp-card .m { font-size: 11px; color: var(--c-text-3); display: flex; align-items: center; gap: 6px; }
+  .mp-card .m .amount { color: var(--c-warn); font-weight: 600; font-size: 12.5px; }
+
+  .mp-input {
+    margin: 6px 12px 8px;
+    background: #fff;
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--c-text-3);
+  }
+  .mp-input .send {
+    margin-left: auto;
+    width: 24px; height: 24px;
+    background: var(--c-green);
+    color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* mp 统计 */
+  .mp-stat-hero {
+    margin: 0 12px 12px;
+    background: linear-gradient(135deg, var(--c-green) 0%, var(--c-green-deep) 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mp-stat-hero::after {
+    content: ""; position: absolute; right: -20px; top: -20px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .mp-stat-hero .l { font-size: 12px; opacity: 0.85; margin: 0; }
+  .mp-stat-hero .v { font-size: 32px; font-weight: 600; margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
+  .mp-stat-hero .d { font-size: 11px; opacity: 0.85; }
+  .mp-stat-card {
+    background: #fff; border: 1px solid var(--c-border);
+    border-radius: 12px;
+    margin: 0 12px 10px;
+    padding: 12px;
+  }
+  .mp-stat-card .t { font-size: 12px; color: var(--c-text-2); margin: 0 0 10px; font-weight: 500; }
+  .mp-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px; }
+  .mp-bar .n { width: 50px; color: var(--c-text-2); }
+  .mp-bar .b { flex: 1; height: 6px; background: var(--c-page); border-radius: 3px; overflow: hidden; }
+  .mp-bar .b div { height: 100%; background: var(--c-green); border-radius: 3px; }
+  .mp-bar .v { width: 50px; text-align: right; font-variant-numeric: tabular-nums; color: var(--c-text-2); }
+
+  /* mp 我的 */
+  .mp-mine-top {
+    background: #fff;
+    padding: 16px 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--c-border);
+  }
+  .avatar {
+    width: 48px; height: 48px;
+    background: var(--c-green-soft); color: var(--c-green-deep);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 18px;
+  }
+  .mp-mine-top .name { font-size: 16px; font-weight: 500; }
+  .mp-mine-top .id { font-size: 11px; color: var(--c-text-3); margin-top: 2px; }
+  .mp-cell-list { background: #fff; margin-top: 10px; }
+  .mp-cell {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--c-border);
+    font-size: 13px;
+  }
+  .mp-cell:last-child { border-bottom: 0; }
+  .mp-cell .ico {
+    width: 28px; height: 28px;
+    background: var(--c-green-soft); color: var(--c-green-deep);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mp-cell .right { margin-left: auto; color: var(--c-text-3); font-size: 11px; display: flex; align-items: center; gap: 4px; }
+
+  /* ============ 设计令牌展示 ============ */
+  .tok-card {
+    background: #fff; border: 1px solid var(--c-border);
+    border-radius: var(--r-card); padding: 20px;
+  }
+  .tok-card h3 {
+    font-size: 13px; font-weight: 500; margin: 0 0 14px;
+    color: var(--c-text-2);
+  }
+  .color-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .color-chip {
+    width: 64px; height: 64px;
+    border-radius: 8px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 6px;
+    font-size: 10px; font-family: var(--f-mono);
+  }
+  .color-chip .n { font-weight: 500; }
+  .color-chip .h { opacity: 0.7; }
+  .typo-row { font-size: 13px; }
+  .typo-row .h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  .typo-row .h2 { font-size: 18px; font-weight: 500; margin: 8px 0 4px; }
+  .typo-row .body { color: var(--c-text-2); line-height: 1.6; }
+  .typo-row .cap { color: var(--c-text-3); font-size: 12px; }
+  .radius-row { display: flex; gap: 12px; align-items: flex-end; }
+  .radius-row .r { background: var(--c-green-soft); border: 1px solid var(--c-green-faint); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--c-green-deep); }
+  .radius-row .r6 { width: 60px; height: 36px; border-radius: 6px; }
+  .radius-row .r8 { width: 60px; height: 36px; border-radius: 8px; }
+  .radius-row .r12 { width: 60px; height: 36px; border-radius: 12px; }
+  .radius-row .r999 { width: 80px; height: 32px; border-radius: 999px; }
+
+  /* ============ 流程时间线 ============ */
+  .flow {
+    background: #fff; border: 1px solid var(--c-border);
+    border-radius: var(--r-card); padding: 24px;
+  }
+  .flow h3 { margin: 0 0 16px; font-size: 14px; }
+  .flow-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 12.5px; }
+  .flow-row .num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--c-green-soft); color: var(--c-green-deep);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .flow-row .txt { color: var(--c-text-1); }
+  .flow-row .sub { color: var(--c-text-3); font-size: 11.5px; margin-left: 6px; }
+
+  /* 底部 */
+  footer {
+    max-width: 1320px;
+    margin: 24px auto 64px;
+    padding: 24px 48px;
+    color: var(--c-text-3);
+    font-size: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px solid var(--c-border);
+  }
+  footer code { font-family: var(--f-mono); color: var(--c-text-2); }
+
+  /* 屏幕分组标签 */
+  .label-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .label-row .pill {
+    font-size: 10px; padding: 1px 7px; border-radius: 999px;
+    background: var(--c-green-soft); color: var(--c-green-deep);
+    font-weight: 500; letter-spacing: 0.05em;
+  }
+  .label-row .pill.mp { background: #E6F4FF; color: #1677FF; }
+
+  /* 用作 inline svg 默认颜色 */
+  svg { display: block; }
+
+  /* 微动效（默认隐藏，避免 screenshot 抓不到；hover 等交互仍有） */
+  .anim { animation: float-in .4s ease both; }
+  .anim.d1 { animation-delay: 0s; }
+  .anim.d2 { animation-delay: 0s; }
+  .anim.d3 { animation-delay: 0s; }
+  @media (prefers-reduced-motion: reduce) {
+    .anim { animation: none; }
+  }
+  @keyframes float-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 900px) {
+    .screens.mac { grid-template-columns: 1fr; }
+    .screens.mp  { grid-template-columns: 1fr; }
+    section { padding: 16px 20px 24px; }
+    .hero { padding: 36px 20px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 顶部 ============ -->
+<header class="hero">
+  <span class="badge"><span class="dot"></span> 设计原型 · v0.1</span>
+  <h1>闪记 FlashNote</h1>
+  <p class="sub">
+    一套 flomo 风格的卡片式快速记录工具，Mac + 微信小程序双端，局域网自动同步。
+    文字笔记与简单账目共用一套数据模型，3 秒内完成一次记录。
+  </p>
+  <div class="meta">
+    <span><strong>主色</strong> #52C41A 豆绿</span>
+    <span><strong>字体</strong> SF Pro · PingFang SC</span>
+    <span><strong>同步</strong> 局域网 mDNS + HTTP</span>
+    <span><strong>总屏数</strong> 7 屏</span>
+  </div>
+</header>
+
+<!-- ============ Mac 端 ============ -->
+<section>
+  <div class="sec-head">
+    <div>
+      <h2>Mac 端</h2>
+      <div class="desc">原生 SwiftUI 单窗口 · 侧边栏 + 卡片流 + 浮动快速记录</div>
+    </div>
+    <div class="en">MAC · 4 SCREENS</div>
+  </div>
+
+  <div class="screens mac">
+
+    <!-- 1. 全部 - 卡片流 -->
+    <div class="screen anim">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill">MAC</span>
+          <span class="name">1. 全部 · 卡片流（默认页）</span>
+        </div>
+        <span class="hint">/ 主页</span>
+      </div>
+      <div class="mac-window">
+        <div class="mac-titlebar">
+          <div class="lights"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <div class="title">闪记</div>
+          <div class="right"></div>
+        </div>
+        <div class="mac-body">
+          <div class="mac-sidebar">
+            <div class="sidebar-section">
+              <div class="title">分类</div>
+              <div class="nav-item active">
+                <span class="ico">≡</span> 全部
+                <span class="count">128</span>
+              </div>
+              <div class="nav-item">
+                <span class="ico">📝</span> 笔记
+                <span class="count">96</span>
+              </div>
+              <div class="nav-item">
+                <span class="ico">💰</span> 账目
+                <span class="count">32</span>
+              </div>
+            </div>
+            <div class="sidebar-section">
+              <div class="title">标签</div>
+              <div class="nav-item"><span class="ico">#</span> 工作 <span class="count">24</span></div>
+              <div class="nav-item"><span class="ico">#</span> 想法 <span class="count">18</span></div>
+              <div class="nav-item"><span class="ico">#</span> 餐 <span class="count">15</span></div>
+              <div class="nav-item"><span class="ico">#</span> 读书 <span class="count">12</span></div>
+            </div>
+            <div class="sidebar-section">
+              <div class="title">视图</div>
+              <div class="nav-item"><span class="ico">📊</span> 统计</div>
+              <div class="nav-item"><span class="ico">⚙</span> 同步设置</div>
+            </div>
+          </div>
+          <div class="mac-main">
+            <div class="mac-topbar">
+              <div class="search">
+                🔍 <span>搜索笔记、标签、金额…</span>
+                <span class="kbd">⌘K</span>
+              </div>
+              <span class="sync-pill"><span class="dot"></span> 已同步 · iPhone 闪记</span>
+            </div>
+            <div class="mac-content">
+              <div class="month-group">
+                <div class="h">今天 · 8月 9日 周日 <span class="sum">支出 <strong>¥68.00</strong> · 3 笔</span></div>
+                <div class="card expense">
+                  <p class="text">晚饭和小李在巷子里那家面馆，牛肉面涨价了，但味道还是老样子</p>
+                  <div class="meta">
+                    <span class="amount">¥38</span>
+                    <span class="sep">·</span>
+                    <span class="tag-chip warm">餐</span>
+                    <span class="tag-chip">朋友</span>
+                    <span style="margin-left:auto;">19:42</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <p class="text">今天听了场播客，关于 Local-first 软件的演化——CRDT 比想象中复杂，但思路挺清晰</p>
+                  <div class="meta">
+                    <span class="tag-chip">想法</span>
+                    <span class="tag-chip purple">产品</span>
+                    <span style="margin-left:auto;">14:20</span>
+                  </div>
+                </div>
+                <div class="card expense">
+                  <p class="text">地铁通勤</p>
+                  <div class="meta">
+                    <span class="amount">¥6</span>
+                    <span class="sep">·</span>
+                    <span class="tag-chip warm">交通</span>
+                    <span style="margin-left:auto;">08:15</span>
+                  </div>
+                </div>
+              </div>
+              <div class="month-group">
+                <div class="h">昨天 · 8月 8日 <span class="sum">支出 <strong>¥24</strong></span></div>
+                <div class="card">
+                  <p class="text">把家里的旧 Kindle 出掉了，回血 ¥180。考虑入一台新的电纸书做笔记用</p>
+                  <div class="meta">
+                    <span class="tag-chip blue">购物</span>
+                    <span style="margin-left:auto;">22:10</span>
+                  </div>
+                </div>
+                <div class="card expense">
+                  <p class="text">咖啡 · 工作日奖励自己</p>
+                  <div class="meta">
+                    <span class="amount">¥24</span>
+                    <span class="sep">·</span>
+                    <span class="tag-chip warm">餐</span>
+                    <span class="tag-chip">工作日</span>
+                    <span style="margin-left:auto;">15:30</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="quick-input global anim d2">
+          <div class="row1">
+            <div class="type-tabs">
+              <span class="on">📝 笔记</span>
+              <span>💰 账目</span>
+            </div>
+          </div>
+          <p class="parse">今天跟客户聊下来，他们对<strong>本地优先</strong>的方案很感兴趣<span class="tag"> #产品</span><span class="tag"> #客户</span> <span class="num">¥28</span></p>
+          <div class="hint">
+            <span class="kbd">⌘</span><span class="kbd">↵</span> 保存 ·
+            <span class="kbd">⇧</span> 切类型 ·
+            <span style="margin-left:8px;">实时解析 <strong style="color:var(--c-green-deep)">笔记</strong> · <strong style="color:var(--c-warn)">¥28.00</strong> · 标签 <strong style="color:var(--c-green-deep)">2</strong></span>
+            <span class="submit">记录</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 快速记录 - 浮层 -->
+    <div class="screen anim d1">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill">MAC</span>
+          <span class="name">2. 快速记录（Cmd+N 浮层）</span>
+        </div>
+        <span class="hint">/ 输入</span>
+      </div>
+      <div class="mac-window">
+        <div class="mac-titlebar">
+          <div class="lights"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <div class="title">闪记 · 新记录</div>
+          <div class="right"></div>
+        </div>
+        <div class="mac-body" style="background: rgba(0,0,0,0.04);">
+          <div style="margin:auto; width: 520px; max-width: 90%;">
+            <div class="quick-input" style="box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 6px rgba(82,196,26,0.08);">
+              <div class="row1">
+                <div class="type-tabs">
+                  <span>📝 笔记</span>
+                  <span class="on">💰 账目</span>
+                </div>
+                <span style="margin-left:auto; font-size:11px; color:var(--c-text-3); font-family:var(--f-mono);">/rec 模式</span>
+              </div>
+              <p class="parse">午饭 拉面 好吃 <span class="num">¥28</span> <span class="tag">#餐</span> <span class="tag">#工作日</span></p>
+              <div class="hint">
+                <span class="kbd">⌘</span><span class="kbd">↵</span> 保存 ·
+                <span class="kbd">esc</span> 关闭
+                <span style="margin-left:8px;">将保存为 <strong style="color:var(--c-warn)">账目</strong></span>
+                <span class="submit">记录</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; padding: 14px 16px; background:#fff; border:1px solid var(--c-border); border-radius: var(--r-card); font-size: 12.5px;">
+              <div style="color:var(--c-text-3); margin-bottom: 8px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;">解析预览</div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <div style="color:var(--c-text-3); font-size:11px;">内容</div>
+                  <div>午饭 拉面 好吃</div>
+                </div>
+                <div>
+                  <div style="color:var(--c-text-3); font-size:11px;">金额</div>
+                  <div style="color:var(--c-warn); font-weight:600;">¥28.00</div>
+                </div>
+                <div>
+                  <div style="color:var(--c-text-3); font-size:11px;">标签</div>
+                  <div style="display:flex; gap:4px;">
+                    <span class="tag-chip warm">餐</span>
+                    <span class="tag-chip">工作日</span>
+                  </div>
+                </div>
+                <div>
+                  <div style="color:var(--c-text-3); font-size:11px;">类型</div>
+                  <div>支出 · 餐饮</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 统计 -->
+    <div class="screen anim d2">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill">MAC</span>
+          <span class="name">3. 统计视图</span>
+        </div>
+        <span class="hint">/ 数据</span>
+      </div>
+      <div class="mac-window">
+        <div class="mac-titlebar">
+          <div class="lights"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <div class="title">闪记 · 统计</div>
+          <div class="right"></div>
+        </div>
+        <div class="mac-body">
+          <div class="mac-main">
+            <div class="mac-topbar">
+              <div class="search" style="background:transparent; border:0;">
+                <span style="font-size:16px; font-weight:600; color:var(--c-text-1);">2026 年 8 月</span>
+                <span class="kbd">‹  ›</span>
+              </div>
+              <span class="sync-pill idle"><span class="dot"></span> 同步中…</span>
+            </div>
+            <div class="mac-content" style="padding-bottom: 24px;">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <p class="lbl">本月支出</p>
+                  <div class="big">¥2,847<span class="u">.50</span></div>
+                  <div class="delta up">↑ 12% vs 上月（¥2,540）</div>
+                </div>
+                <div class="stat-card">
+                  <p class="lbl">记录数 · 笔</p>
+                  <div class="big">68</div>
+                  <div class="delta down">↓ 4 笔 vs 上月</div>
+                </div>
+              </div>
+
+              <div class="stat-card" style="margin-bottom: 16px;">
+                <p class="lbl" style="margin-bottom: 12px;">分类分布</p>
+                <div class="ring-wrap">
+                  <div class="ring" style="--p: 38">
+                    <span class="v">38%</span>
+                  </div>
+                  <div class="cat-list">
+                    <div class="cat-row"><span class="dot" style="background:#52C41A"></span><span class="name">🍱 餐</span><span class="v">¥1,082</span></div>
+                    <div class="cat-row"><span class="dot" style="background:#1677FF"></span><span class="name">🛍 购物</span><span class="v">¥640</span></div>
+                    <div class="cat-row"><span class="dot" style="background:#FAAD14"></span><span class="name">🚇 交通</span><span class="v">¥420</span></div>
+                    <div class="cat-row"><span class="dot" style="background:#722ED1"></span><span class="name">🎮 娱乐</span><span class="v">¥380</span></div>
+                    <div class="cat-row"><span class="dot" style="background:#8C8C8C"></span><span class="name">其他</span><span class="v">¥325</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <p class="lbl" style="margin-bottom: 14px;">最近 7 天</p>
+                <div style="display:flex; gap:6px; align-items:flex-end; height: 80px;">
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 40%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">3</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 60%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">4</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 30%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">5</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 80%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">6</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 50%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">7</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green-soft); height: 70%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-text-3);">8</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="width:100%; background: var(--c-green); height: 90%; border-radius: 3px;"></div>
+                    <span style="font-size:10px; color:var(--c-green-deep); font-weight:600;">今</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 同步设置 -->
+    <div class="screen anim d3">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill">MAC</span>
+          <span class="name">4. 同步设置</span>
+        </div>
+        <span class="hint">/ 设置</span>
+      </div>
+      <div class="mac-window">
+        <div class="mac-titlebar">
+          <div class="lights"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <div class="title">闪记 · 设置</div>
+          <div class="right"></div>
+        </div>
+        <div class="mac-body">
+          <div class="mac-sidebar" style="width: 180px;">
+            <div class="sidebar-section">
+              <div class="title">设置</div>
+              <div class="nav-item">📝 记录</div>
+              <div class="nav-item active">🔄 同步</div>
+              <div class="nav-item">🎨 外观</div>
+              <div class="nav-item">📦 数据</div>
+              <div class="nav-item">ℹ 关于</div>
+            </div>
+          </div>
+          <div class="mac-main">
+            <div class="mac-topbar">
+              <div class="search" style="background:transparent; border:0;">
+                <span style="font-size:16px; font-weight:600;">局域网同步</span>
+              </div>
+            </div>
+            <div class="mac-content">
+              <div class="pair-card">
+                <p class="t1">在微信小程序「闪记」中输入配对码</p>
+                <div class="code">8 2 4 1</div>
+                <p class="t2">本机 IP 192.168.1.42 · 端口 9527</p>
+              </div>
+
+              <div class="device-list">
+                <div style="padding: 10px 16px; font-size: 12px; color: var(--c-text-3); border-bottom: 1px solid var(--c-border); background: #FCFCFC; font-weight: 500;">已连接设备</div>
+                <div class="device">
+                  <div class="ico">📱</div>
+                  <div>
+                    <div class="name">iPhone 闪记</div>
+                    <div class="sub">微信小程序 · 最后同步 刚刚</div>
+                  </div>
+                  <span class="pill">已连接</span>
+                </div>
+                <div class="device">
+                  <div class="ico" style="background:#E6F4FF; color:#1677FF;">💻</div>
+                  <div>
+                    <div class="name">MacBook Pro</div>
+                    <div class="sub">本机 · 当前</div>
+                  </div>
+                  <span class="pill" style="background: #F5F5F5; color: var(--c-text-3);">本机</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 16px; padding: 12px 16px; background: var(--c-warn-soft); border: 1px solid #FFE7BA; border-radius: var(--r-card); font-size: 12px; color: #874D00; display: flex; gap: 8px; align-items: flex-start;">
+                <span>💡</span>
+                <div>
+                  <strong>同步策略</strong>：每 30 秒增量同步一次（基于 updatedAt），或点击「立即同步」按钮立即触发。冲突以最新更新时间为准。
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button style="padding: 7px 16px; background: var(--c-green); color: #fff; border: 0; border-radius: var(--r-btn); font-size: 13px; font-weight: 500; cursor: pointer;">立即同步</button>
+                <button style="padding: 7px 16px; background: #fff; color: var(--c-text-1); border: 1px solid var(--c-border-2); border-radius: var(--r-btn); font-size: 13px; cursor: pointer;">重新生成配对码</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 微信小程序 ============ -->
+<section>
+  <div class="sec-head">
+    <div>
+      <h2>微信小程序</h2>
+      <div class="desc">原生 WXML · 首页 + 统计 + 我的 三 tab · 底部常驻快速输入</div>
+    </div>
+    <div class="en">MINI PROGRAM · 3 SCREENS</div>
+  </div>
+
+  <div class="screens mp">
+
+    <!-- 1. 首页 -->
+    <div class="screen anim">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill mp">小程序</span>
+          <span class="name">1. 首页 · 卡片流</span>
+        </div>
+        <span class="hint">/ pages/index</span>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg width="16" height="10" viewBox="0 0 16 10"><path d="M1 9h2V4H1v5zm4 0h2V2H5v7zm4 0h2V5H9v4zm4-7v7h2V0h-2z" fill="currentColor"/></svg>
+            <svg width="22" height="10" viewBox="0 0 22 10"><path d="M1 8a1 1 0 011-1h2a1 1 0 011 1v1H2V8zm5-3a1 1 0 011-1h10a1 1 0 011 1v5H7V5z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="screen-body">
+          <div class="mp-top">
+            <div class="title">闪记</div>
+            <div class="right">
+              <span class="sync-pill" style="font-size:10px; padding: 2px 8px;">
+                <span class="dot"></span> 已同步
+              </span>
+            </div>
+          </div>
+          <div class="mp-search">🔍 搜索</div>
+          <div class="mp-list">
+            <div class="day">今天</div>
+            <div class="mp-card expense">
+              <p class="t">晚饭 牛肉面</p>
+              <div class="m">
+                <span class="amount">¥38</span>
+                <span style="color:var(--c-text-4);">·</span>
+                <span class="tag-chip warm" style="font-size:10px; line-height:16px; padding: 0 6px;">餐</span>
+                <span style="margin-left:auto;">19:42</span>
+              </div>
+            </div>
+            <div class="mp-card">
+              <p class="t">今天听了场播客，关于 Local-first 软件演化</p>
+              <div class="m">
+                <span class="tag-chip" style="font-size:10px; line-height:16px; padding: 0 6px;">想法</span>
+                <span style="margin-left:auto;">14:20</span>
+              </div>
+            </div>
+            <div class="day">昨天</div>
+            <div class="mp-card">
+              <p class="t">把家里的旧 Kindle 出掉了，回血 ¥180</p>
+              <div class="m">
+                <span class="tag-chip blue" style="font-size:10px; line-height:16px; padding: 0 6px;">购物</span>
+                <span style="margin-left:auto;">22:10</span>
+              </div>
+            </div>
+            <div class="mp-card expense">
+              <p class="t">咖啡</p>
+              <div class="m">
+                <span class="amount">¥24</span>
+                <span style="color:var(--c-text-4);">·</span>
+                <span class="tag-chip warm" style="font-size:10px; line-height:16px; padding: 0 6px;">餐</span>
+                <span style="margin-left:auto;">15:30</span>
+              </div>
+            </div>
+          </div>
+          <div class="mp-input">
+            <span>✏️ 记一笔…</span>
+            <div class="send">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              全部
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
+              统计
+            </div>
+            <div class="tab" style="position: relative;">
+              <div class="add">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              同步
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              我的
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 统计 -->
+    <div class="screen anim d1">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill mp">小程序</span>
+          <span class="name">2. 统计</span>
+        </div>
+        <span class="hint">/ pages/stats</span>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg width="16" height="10" viewBox="0 0 16 10"><path d="M1 9h2V4H1v5zm4 0h2V2H5v7zm4 0h2V5H9v4zm4-7v7h2V0h-2z" fill="currentColor"/></svg>
+            <svg width="22" height="10" viewBox="0 0 22 10"><path d="M1 8a1 1 0 011-1h2a1 1 0 011 1v1H2V8zm5-3a1 1 0 011-1h10a1 1 0 011 1v5H7V5z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="screen-body">
+          <div class="mp-top">
+            <div class="title">统计</div>
+            <div class="right" style="font-size:12px; color:var(--c-text-2);">8月 ›</div>
+          </div>
+          <div style="padding: 0 12px 6px; font-size:11px; color:var(--c-text-3);">本月支出</div>
+          <div class="mp-stat-hero">
+            <p class="l">2026 年 8 月</p>
+            <div class="v">¥2,847<span style="font-size:18px; font-weight:400; opacity:0.85;">.50</span></div>
+            <p class="d">↑ 12% vs 上月 · 共 32 笔</p>
+          </div>
+          <div class="mp-stat-card">
+            <p class="t">分类占比</p>
+            <div class="mp-bar">
+              <span class="n">🍱 餐</span>
+              <div class="b"><div style="width: 70%; background: #52C41A;"></div></div>
+              <span class="v">¥1,082</span>
+            </div>
+            <div class="mp-bar">
+              <span class="n">🛍 购物</span>
+              <div class="b"><div style="width: 42%; background: #1677FF;"></div></div>
+              <span class="v">¥640</span>
+            </div>
+            <div class="mp-bar">
+              <span class="n">🚇 交通</span>
+              <div class="b"><div style="width: 28%; background: #FAAD14;"></div></div>
+              <span class="v">¥420</span>
+            </div>
+            <div class="mp-bar">
+              <span class="n">🎮 娱乐</span>
+              <div class="b"><div style="width: 25%; background: #722ED1;"></div></div>
+              <span class="v">¥380</span>
+            </div>
+            <div class="mp-bar">
+              <span class="n">其他</span>
+              <div class="b"><div style="width: 21%; background: #8C8C8C;"></div></div>
+              <span class="v">¥325</span>
+            </div>
+          </div>
+          <div class="mp-stat-card">
+            <p class="t">最近 7 天</p>
+            <div style="display:flex; gap:6px; align-items:flex-end; height: 60px;">
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 40%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">3</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 60%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">4</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 30%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">5</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 80%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">6</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 50%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">7</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green-soft); height: 70%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-text-3);">8</span>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                <div style="width:100%; background: var(--c-green); height: 90%; border-radius: 3px;"></div>
+                <span style="font-size:9px; color:var(--c-green-deep); font-weight:600;">今</span>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar" style="margin-top:auto;">
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              全部
+            </div>
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
+              统计
+            </div>
+            <div class="tab" style="position: relative;">
+              <div class="add">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              同步
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              我的
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 我的 / 设备配对 -->
+    <div class="screen anim d2">
+      <div class="label">
+        <div class="label-row">
+          <span class="pill mp">小程序</span>
+          <span class="name">3. 我的 · 设备配对</span>
+        </div>
+        <span class="hint">/ pages/mine</span>
+      </div>
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="status">
+          <span>9:41</span>
+          <span class="right">
+            <svg width="16" height="10" viewBox="0 0 16 10"><path d="M1 9h2V4H1v5zm4 0h2V2H5v7zm4 0h2V5H9v4zm4-7v7h2V0h-2z" fill="currentColor"/></svg>
+            <svg width="22" height="10" viewBox="0 0 22 10"><path d="M1 8a1 1 0 011-1h2a1 1 0 011 1v1H2V8zm5-3a1 1 0 011-1h10a1 1 0 011 1v5H7V5z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="screen-body">
+          <div class="mp-top">
+            <div class="title">我的</div>
+          </div>
+          <div class="mp-mine-top">
+            <div class="avatar">J</div>
+            <div>
+              <div class="name">Jaiken</div>
+              <div class="id">device-id: mp-7e9a-2f</div>
+            </div>
+          </div>
+
+          <div style="margin: 10px 12px; padding: 14px; background: linear-gradient(135deg, var(--c-green-soft) 0%, #fff 100%); border: 1px solid var(--c-green-faint); border-radius: 10px; text-align: center;">
+            <p style="margin:0 0 6px; font-size: 11px; color: var(--c-text-2);">输入 Mac 端显示的配对码</p>
+            <div style="display:flex; gap:6px; justify-content:center; margin: 6px 0;">
+              <div style="width:36px; height:42px; background:#fff; border:1.5px solid var(--c-green); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; color: var(--c-green-deep);">8</div>
+              <div style="width:36px; height:42px; background:#fff; border:1.5px solid var(--c-green); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; color: var(--c-green-deep);">2</div>
+              <div style="width:36px; height:42px; background:#fff; border:1.5px solid var(--c-green); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; color: var(--c-green-deep);">4</div>
+              <div style="width:36px; height:42px; background:#fff; border:1.5px solid var(--c-border-2); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; color: var(--c-text-4);">_</div>
+            </div>
+            <p style="margin: 6px 0 0; font-size:10px; color: var(--c-text-3);">需与 Mac 在同一 WiFi 下</p>
+          </div>
+
+          <div class="mp-cell-list">
+            <div class="mp-cell">
+              <div class="ico">📱</div>
+              <div>
+                <div>iPhone 闪记</div>
+                <div style="font-size: 11px; color: var(--c-text-3); margin-top: 2px;">本机 · 32 条记录</div>
+              </div>
+              <div class="right">本机</div>
+            </div>
+          </div>
+
+          <div class="mp-cell-list">
+            <div class="mp-cell">
+              <div class="ico">💻</div>
+              <div>MacBook Pro</div>
+              <div class="right">
+                <span style="color:var(--c-green-deep);">已连接</span>
+                <span>›</span>
+              </div>
+            </div>
+            <div class="mp-cell">
+              <div class="ico">📤</div>
+              <div>导出数据</div>
+              <div class="right"><span>›</span></div>
+            </div>
+            <div class="mp-cell">
+              <div class="ico">🎨</div>
+              <div>外观</div>
+              <div class="right"><span>›</span></div>
+            </div>
+            <div class="mp-cell">
+              <div class="ico">ℹ</div>
+              <div>关于闪记</div>
+              <div class="right"><span style="color:var(--c-text-4);">v0.1.0</span><span>›</span></div>
+            </div>
+          </div>
+
+          <div class="tabbar" style="margin-top:auto;">
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              全部
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
+              统计
+            </div>
+            <div class="tab" style="position: relative;">
+              <div class="add">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              同步
+            </div>
+            <div class="tab on">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              我的
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ 关键流程 ============ -->
+<section>
+  <div class="sec-head">
+    <div>
+      <h2>关键交互流程</h2>
+      <div class="desc">从一次随手记录到两端的同步落地，5 步完成闭环</div>
+    </div>
+    <div class="en">FLOW</div>
+  </div>
+  <div class="flow">
+    <h3>「午饭 28 #餐」从输入到两端同步的完整路径</h3>
+    <div class="flow-row"><span class="num">1</span><span class="txt">任意界面 <code style="font-family:var(--f-mono); background:var(--c-page); padding:1px 5px; border-radius:3px;">⌘N</code> / 点击小程序底部 +</span></div>
+    <div class="flow-row"><span class="num">2</span><span class="txt">输入框聚焦，实时解析 <span style="color:var(--c-text-2);">「午饭」</span> <span style="color:var(--c-warn); font-weight:600;">28</span> <span style="color:var(--c-green-deep);">#餐</span></span></div>
+    <div class="flow-row"><span class="num">3</span><span class="txt"><code style="font-family:var(--f-mono); background:var(--c-page); padding:1px 5px; border-radius:3px;">⌘↵</code> 提交 · 本地先存 → 卡片从顶部插入</span></div>
+    <div class="flow-row"><span class="num">4</span><span class="txt">30s 内自动推送至对端（mDNS 发现 + WebSocket 增量）</span></div>
+    <div class="flow-row"><span class="num">5</span><span class="txt">对端落库 → 右上角同步点从 <strong style="color:var(--c-warn)">橙</strong> 变 <strong style="color:var(--c-green-deep)">绿</strong></span></div>
+  </div>
+</section>
+
+<!-- ============ 设计令牌 ============ -->
+<section>
+  <div class="sec-head">
+    <div>
+      <h2>设计令牌 · Design Tokens</h2>
+      <div class="desc">实现层直接复用 · 颜色 / 字体 / 圆角 / 间距</div>
+    </div>
+    <div class="en">TOKENS</div>
+  </div>
+  <div class="screens tok">
+    <div class="tok-card">
+      <h3>色板 · Colors</h3>
+      <div class="color-row">
+        <div class="color-chip" style="background:#52C41A; color:#fff;">
+          <span class="n">主色</span>
+          <span class="h">#52C41A</span>
+        </div>
+        <div class="color-chip" style="background:#F6FFED; color:#389E0D;">
+          <span class="n">浅底</span>
+          <span class="h">#F6FFED</span>
+        </div>
+        <div class="color-chip" style="background:#389E0D; color:#fff;">
+          <span class="n">深</span>
+          <span class="h">#389E0D</span>
+        </div>
+        <div class="color-chip" style="background:#FAAD14; color:#fff;">
+          <span class="n">支出</span>
+          <span class="h">#FAAD14</span>
+        </div>
+        <div class="color-chip" style="background:#1F1F1F; color:#fff;">
+          <span class="n">主文字</span>
+          <span class="h">#1F1F1F</span>
+        </div>
+        <div class="color-chip" style="background:#FAFAFA; color:#595959;">
+          <span class="n">页面底</span>
+          <span class="h">#FAFAFA</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tok-card">
+      <h3>字体 · Typography</h3>
+      <div class="typo-row">
+        <div class="h1">闪记</div>
+        <div class="h2">Display · 18-30px / 500-600</div>
+        <div class="body">Body · 14-15px / 400 · 行高 1.5-1.6</div>
+        <div class="cap">Caption · 11-12px / 500 · 颜色 --c-text-3</div>
+      </div>
+    </div>
+
+    <div class="tok-card">
+      <h3>圆角 · Radius</h3>
+      <div class="radius-row">
+        <div class="r r6">6</div>
+        <div class="r r8">8</div>
+        <div class="r r12">12</div>
+        <div class="r r999">999</div>
+      </div>
+      <div style="font-size:12px; color:var(--c-text-3); margin-top: 12px;">chip · 按钮 · 卡片 · 胶囊</div>
+    </div>
+
+    <div class="tok-card">
+      <h3>间距 · Spacing</h3>
+      <div style="display:flex; gap: 12px; align-items: flex-end;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width: 8px; height: 8px; background: var(--c-green-soft); border-radius: 2px;"></div>
+          <span style="font-size:10px; color:var(--c-text-3);">8</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width: 12px; height: 12px; background: var(--c-green-soft); border-radius: 2px;"></div>
+          <span style="font-size:10px; color:var(--c-text-3);">12</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width: 16px; height: 16px; background: var(--c-green-soft); border-radius: 2px;"></div>
+          <span style="font-size:10px; color:var(--c-text-3);">16</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width: 24px; height: 24px; background: var(--c-green-soft); border-radius: 2px;"></div>
+          <span style="font-size:10px; color:var(--c-text-3);">24</span>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width: 32px; height: 32px; background: var(--c-green-soft); border-radius: 2px;"></div>
+          <span style="font-size:10px; color:var(--c-text-3);">32</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>闪记 FlashNote · 设计原型 v0.1</div>
+  <div>查看完整设计文档：<code>DESIGN.md</code></div>
+</footer>
+
+</body>
+</html>
