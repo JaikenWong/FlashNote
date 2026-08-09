@@ -93,6 +93,33 @@
     </div>
   </div>
 
+  <!-- 编辑浮层 -->
+  <div class="edit-mask" id="editMask" hidden>
+    <div class="edit-card">
+      <div class="edit-header">
+        <span class="edit-title">编辑记录</span>
+        <button class="edit-close" id="editClose" aria-label="关闭">×</button>
+      </div>
+      <textarea
+        class="edit-textarea"
+        id="editText"
+        placeholder="午饭 28 #餐 · 想法 #产品"
+        rows="3"
+      ></textarea>
+      <div class="edit-preview" id="editPreview" hidden>
+        <span class="preview-amount" id="editAmount"></span>
+        <span class="preview-tags" id="editTags"></span>
+        <span class="preview-type" id="editType"></span>
+      </div>
+      <div class="edit-actions">
+        <button class="edit-del" id="editDel">删除</button>
+        <div class="edit-spacer"></div>
+        <button class="edit-cancel" id="editCancel">取消</button>
+        <button class="edit-save" id="editSave">保存</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/js/app.js"></script>
   <script>
     // 注册 service worker（PWA 离线）

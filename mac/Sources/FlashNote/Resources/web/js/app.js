@@ -36,6 +36,16 @@ const tabStats = $('tabStats');
 const mainEl = $('main');
 const statsMainEl = $('statsMain');
 const statsContentEl = $('statsContent');
+const editMask = $('editMask');
+const editText = $('editText');
+const editPreview = $('editPreview');
+const editAmount = $('editAmount');
+const editTags = $('editTags');
+const editType = $('editType');
+const editClose = $('editClose');
+const editCancel = $('editCancel');
+const editSave = $('editSave');
+const editDel = $('editDel');
 
 // ===== 初始化 =====
 const deviceId = getOrCreateDeviceId();
@@ -63,6 +73,16 @@ syncPill.addEventListener('click', () => doSync(true));
 // Tab 切换
 tabList.addEventListener('click', () => switchTab('list'));
 tabStats.addEventListener('click', () => switchTab('stats'));
+
+// 编辑浮层
+editClose.addEventListener('click', closeEdit);
+editCancel.addEventListener('click', closeEdit);
+editDel.addEventListener('click', deleteFromEdit);
+editSave.addEventListener('click', saveEdit);
+editText.addEventListener('input', renderEditPreview);
+editMask.addEventListener('click', e => {
+  if (e.target === editMask) closeEdit();   // 点遮罩关闭
+});
 
 // 网络恢复后自动同步
 window.addEventListener('online', () => doSync(false));
@@ -179,6 +199,96 @@ function renderStats() {
   statsContentEl.innerHTML = renderStatsHtml(stats);
 }
 
+// ===== 编辑浮层 =====
+let editingRecord = null;  // 当前正在编辑的 record
+
+function openEdit(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingRecord = r;
+  editText.value = composeText(r);
+  renderEditPreview();
+  editMask.hidden = false;
+  // 下一帧聚焦（让动画先跑）
+  setTimeout(() => editText.focus(), 50);
+}
+
+function closeEdit() {
+  editMask.hidden = true;
+  editingRecord = null;
+  editText.value = '';
+}
+
+function renderEditPreview() {
+  const text = editText.value;
+  if (!text.trim()) {
+    editPreview.hidden = true;
+    editSave.disabled = true;
+    return;
+  }
+  const preview = parse(text, deviceId);
+  if (!preview) {
+    editPreview.hidden = true;
+    editSave.disabled = true;
+    return;
+  }
+  editPreview.hidden = false;
+  editAmount.textContent = preview.amount ? `¥${preview.amount.toFixed(2)}` : '';
+  editTags.innerHTML = preview.tags.slice(0, 4).map(t => `<span class="tag-chip">#${escapeHtml(t)}</span>`).join('');
+  editType.textContent = preview.type === 'expense' ? '账目' : '笔记';
+  editSave.disabled = false;
+}
+
+function saveEdit() {
+  if (!editingRecord) return;
+  const text = editText.value.trim();
+  if (!text) return;
+  const parsed = parse(text, deviceId);
+  if (!parsed) return;
+  // 保留 id / createdAt；deviceId 改成当前 web（否则 sync filter 不到）
+  // 更新其他字段 + updatedAt
+  const updated = {
+    id: editingRecord.id,
+    type: parsed.type,
+    content: parsed.content,
+    amount: parsed.amount,
+    tags: parsed.tags,
+    createdAt: editingRecord.createdAt,
+    updatedAt: new Date().toISOString(),
+    deviceId: deviceId,
+    deleted: false,
+  };
+  // 替换本地记录
+  const all = loadAll();
+  const idx = all.findIndex(r => r.id === updated.id);
+  if (idx >= 0) {
+    all[idx] = updated;
+    saveAll(all);
+  }
+  closeEdit();
+  refresh();
+  doSync(false);
+}
+
+function deleteFromEdit() {
+  if (!editingRecord) return;
+  if (!confirm('删除这条记录？')) return;
+  const id = editingRecord.id;
+  closeEdit();
+  softDelete(id);
+  refresh();
+  doSync(false);
+}
+
+/** 把 record 反向 compose 成 text（与 mac/QuickRecordModal.composeText 对齐） */
+function composeText(r) {
+  const parts = [];
+  if (r.amount) parts.push(`¥${r.amount}`);
+  if (r.content) parts.push(r.content);
+  for (const t of (r.tags || [])) parts.push(`#${t}`);
+  return parts.join(' ');
+}
+
 function renderList(rs) {
   const sorted = rs.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const groups = {};
@@ -218,16 +328,20 @@ function renderCard(r) {
 }
 
 listEl.addEventListener('click', e => {
-  const btn = e.target.closest('[data-act]');
-  if (!btn) return;
-  const id = btn.dataset.id;
-  if (btn.dataset.act === 'del') {
+  const delBtn = e.target.closest('[data-act="del"]');
+  if (delBtn) {
+    const id = delBtn.dataset.id;
     if (confirm('删除这条记录？')) {
       softDelete(id);
       refresh();
-      // 触发后台同步（让 Mac 端也知道删了）
       doSync(false);
     }
+    return;
+  }
+  // 点卡片本体（不在删除按钮上）→ 打开编辑
+  const card = e.target.closest('.card');
+  if (card) {
+    openEdit(card.dataset.id);
   }
 });
 

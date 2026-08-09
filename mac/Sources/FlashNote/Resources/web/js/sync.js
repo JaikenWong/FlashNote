@@ -59,8 +59,12 @@ export function push(deviceId, changes) {
 }
 
 /**
- * 一次完整同步：先 pull，merge；再 push 本地比 server 新的
+ * 一次完整同步：先 pull，merge；再 push 本地属于本设备的所有变更
  * 任何错误都冒泡给调用方
+ *
+ * 注意：toPush 用「本设备的所有非删除记录」+ LWW 由 Mac 端判重。
+ * 不能用 updatedAt > lastServer 作条件——save 后立刻 sync，
+ * pull 的 serverTime 可能晚于 save 的 updatedAt，导致新改动漏推。
  */
 export async function syncOnce(deviceId) {
   // 1. 拉
@@ -72,13 +76,10 @@ export async function syncOnce(deviceId) {
     mergeRecords(remote);
   }
 
-  // 3. 推送本地比 server 新的
+  // 3. 推送本设备所有记录（含软删除）— Mac 用 LWW 按 updatedAt 判重
+  // 必须含 deleted=true 的，否则删除事件永远不同步到 Mac
   const after = loadAll();
-  const lastServer = new Date(pullResp.serverTime).getTime();
-  const toPush = after.filter(r => {
-    const t = new Date(r.updatedAt).getTime();
-    return t > lastServer && r.deviceId === deviceId;
-  });
+  const toPush = after.filter(r => r.deviceId === deviceId);
 
   let pushed = 0;
   if (toPush.length > 0) {

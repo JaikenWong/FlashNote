@@ -581,3 +581,134 @@ body {
   font-size: 12px;
   color: var(--c-text-2);
 }
+
+/* ====== 编辑浮层 ====== */
+.edit-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn .15s;
+}
+.edit-mask[hidden] { display: none; }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.edit-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--c-bg);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 20px calc(20px + var(--safe-bottom));
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: slideUp .2s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.edit-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text-1);
+}
+.edit-close {
+  appearance: none;
+  background: none;
+  border: 0;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--c-text-3);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.edit-textarea {
+  width: 100%;
+  border: 1.5px solid var(--c-border);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: none;
+  background: var(--c-page);
+  color: var(--c-text-1);
+  outline: none;
+  transition: border-color .15s;
+}
+.edit-textarea:focus {
+  border-color: var(--c-green);
+  background: var(--c-bg);
+}
+.edit-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--c-text-2);
+  min-height: 24px;
+  flex-wrap: wrap;
+}
+.edit-preview[hidden] { display: none; }
+.edit-preview .preview-amount {
+  color: var(--c-warn);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.edit-preview .preview-type {
+  font-size: 11px;
+  color: var(--c-text-3);
+  padding: 1px 6px;
+  background: var(--c-page);
+  border-radius: 4px;
+}
+.edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.edit-spacer { flex: 1; }
+.edit-del {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: #FF4D4F;
+  font-size: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.edit-cancel {
+  appearance: none;
+  background: var(--c-page);
+  border: 0;
+  color: var(--c-text-2);
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.edit-save {
+  appearance: none;
+  background: var(--c-green);
+  border: 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.edit-save:disabled { background: var(--c-text-4); cursor: not-allowed; }
+.edit-save:active:not(:disabled) { transform: scale(0.98); }
+
+/* 卡片可点击：cursor + hover */
+.card { cursor: pointer; }
+.card:active { background: #fafafa; }
