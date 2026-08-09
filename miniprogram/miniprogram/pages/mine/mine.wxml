@@ -1,7 +1,7 @@
 <view class="page">
   <!-- 头部：用户 + 设备信息 -->
   <view class="profile">
-    <view class="avatar">📱</view>
+    <image class="avatar" src="/images/logo.png" mode="aspectFit"></image>
     <view class="info">
       <view class="name">闪记</view>
       <view class="device-id">device-id: {{deviceId}}</view>
