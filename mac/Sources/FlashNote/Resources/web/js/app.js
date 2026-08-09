@@ -275,7 +275,7 @@ function deleteFromEdit() {
   if (!confirm('删除这条记录？')) return;
   const id = editingRecord.id;
   closeEdit();
-  softDelete(id);
+  softDelete(id, deviceId);
   refresh();
   doSync(false);
 }
@@ -332,7 +332,7 @@ listEl.addEventListener('click', e => {
   if (delBtn) {
     const id = delBtn.dataset.id;
     if (confirm('删除这条记录？')) {
-      softDelete(id);
+      softDelete(id, deviceId);
       refresh();
       doSync(false);
     }

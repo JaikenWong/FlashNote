@@ -1,7 +1,7 @@
 // web/js/sync.js
 // 跟 Mac server 的 HTTP API 对话
 
-import { loadAll, saveAll, getServer, getToken, setToken } from './storage.js';
+import { loadAll, saveAll, getServer, getToken, setToken, getLastSyncTime, setLastSyncTime } from './storage.js';
 
 const TIMEOUT_MS = 5000;
 
@@ -41,9 +41,11 @@ export function pair(code, deviceId, deviceName) {
 }
 
 export function pull(deviceId) {
-  const local = loadAll();
-  const since = local.reduce((m, r) => Math.max(m, new Date(r.updatedAt).getTime()), 0);
-  const sinceStr = since ? new Date(since).toISOString() : '1970-01-01T00:00:00Z';
+  // since 用「上次拉取的服务端时间」游标，而非本地最大 updatedAt：
+  // 本地 updatedAt 来自设备本地时钟，Mac 旧记录的 updatedAt 可能小于它，
+  // 用本地时钟当 since 会永远拉不到 Mac 的历史记录。
+  const since = getLastSyncTime();
+  const sinceStr = since || '1970-01-01T00:00:00Z';
   return fetchJSON(
     `${getServer()}/api/records?since=${encodeURIComponent(sinceStr)}&deviceId=${encodeURIComponent(deviceId)}`,
     { headers: authHeaders() }
@@ -76,8 +78,15 @@ export async function syncOnce(deviceId) {
     mergeRecords(remote);
   }
 
-  // 3. 推送本设备所有记录（含软删除）— Mac 用 LWW 按 updatedAt 判重
+  // 3. 推进拉取游标到服务端时间（只在成功拉取+合并后推进）
+  // 用服务端时钟而不是本地时钟，避免本地时钟偏差导致漏拉
+  if (pullResp.serverTime) {
+    setLastSyncTime(pullResp.serverTime);
+  }
+
+  // 4. 推送本设备所有记录（含软删除）— Mac 用 LWW 按 updatedAt 判重
   // 必须含 deleted=true 的，否则删除事件永远不同步到 Mac
+  // 注意：不能用 updatedAt > lastServer 作条件（见下方注释）
   const after = loadAll();
   const toPush = after.filter(r => r.deviceId === deviceId);
 

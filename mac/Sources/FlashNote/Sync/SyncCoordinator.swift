@@ -34,10 +34,18 @@ final class SyncCoordinator: ObservableObject {
             port: port,
             pairManager: pairManager,
             tokenStore: tokenStore,
-            recordsProvider: { store.records },
+            recordsProvider: { [store] in
+                // 主线程读，避免后台线程并发访问 @Published 数组
+                if Thread.isMainThread { return store.records }
+                return DispatchQueue.main.sync { store.records }
+            },
             recordsApplier: { [weak self] incoming in
                 guard let self = self else { return }
-                self.applyIncoming(incoming)
+                // @MainActor 跳转：applyIncoming 里的 store.mergeFromRemote
+                // 会改 @Published records，必须在主线程执行
+                DispatchQueue.main.async {
+                    self.applyIncoming(incoming)
+                }
             }
         )
         let advertiser = MDNSAdvertiser(port: port)

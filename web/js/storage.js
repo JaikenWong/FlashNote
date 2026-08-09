@@ -6,6 +6,7 @@ const KEY = 'flashnote.records';
 const KEY_DEVICE = 'flashnote.deviceId';
 const KEY_SERVER = 'flashnote.syncServer';
 const KEY_TOKEN = 'flashnote.syncToken';
+const KEY_SERVER_TIME = 'flashnote.lastSyncTime';
 
 export function loadAll() {
   try {
@@ -31,14 +32,25 @@ export function add(record) {
   return record;
 }
 
-export function softDelete(id) {
+export function softDelete(id, deviceId) {
   const records = loadAll();
   const idx = records.findIndex(r => r.id === id);
   if (idx >= 0) {
     records[idx].deleted = true;
     records[idx].updatedAt = new Date().toISOString();
+    // 所有权转移给当前设备，保证 sync 推送条件 r.deviceId === deviceId 能命中
+    // （否则 Mac 源记录在 web 上删除后推不回 Mac）
+    if (deviceId) records[idx].deviceId = deviceId;
     saveAll(records);
   }
+}
+
+// ====== 同步游标（记录上次成功拉取的服务端时间）======
+export function getLastSyncTime() {
+  return localStorage.getItem(KEY_SERVER_TIME) || '';
+}
+export function setLastSyncTime(t) {
+  if (t) localStorage.setItem(KEY_SERVER_TIME, t);
 }
 
 export function hardDelete(id) {

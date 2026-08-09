@@ -266,9 +266,12 @@ final class SyncServer {
     private func handlePull(query: [String: String]) -> SyncResponse {
         let since = query["since"].flatMap { ISO8601DateFormatter().date(from: $0) } ?? Date(timeIntervalSince1970: 0)
         let deviceId = query["deviceId"] ?? ""
+        // 先取「服务端此刻时间」再做快照：保证 serverTime 与过滤窗口一致，
+        // 客户端用 serverTime 当下次 since 才不会漏掉快照后新增的记录
+        let now = Date()
         // 在主线程中读取
         let all = recordsProvider()
-        let changes = all.filter { $0.updatedAt > since }
+        let changes = all.filter { $0.updatedAt > since && $0.updatedAt <= now }
 
         let arr = changes.map { record -> [String: Any] in
             [
@@ -286,7 +289,7 @@ final class SyncServer {
         _ = deviceId
         return jsonOk([
             "changes": arr,
-            "serverTime": ISO8601DateFormatter().string(from: Date())
+            "serverTime": ISO8601DateFormatter().string(from: now)
         ])
     }
 
