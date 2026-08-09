@@ -421,13 +421,24 @@ function startLongPress(btn) {
     pressingBtn = null;
     pressTimer = null;
     suppressClick = true;
-    // 若随后的 click 没来（pointercancel 等），300ms 后自动复位，防误吞下次点击
     setTimeout(() => { suppressClick = false; }, 300);
-    softDelete(id, deviceId);
-    refresh();
-    doSync(false);
-    // 轻提示
-    showToast('已删除');
+
+    // 找到对应卡片，加 .deleting 触发 fade out；动画结束再真正删
+    const card = btn.closest('.card');
+    if (card) {
+      card.classList.add('deleting');
+      setTimeout(() => {
+        softDelete(id, deviceId);
+        refresh();
+        doSync(false);
+        showToast('已删除');
+      }, 220);
+    } else {
+      softDelete(id, deviceId);
+      refresh();
+      doSync(false);
+      showToast('已删除');
+    }
   }, LONG_PRESS_MS);
 }
 function cancelLongPress() {
@@ -519,6 +530,8 @@ function submit() {
   inputEl.value = '';
   renderPreview();
   refresh();
+  // 收键盘（iPhone 上提交后键盘留着会很烦）
+  inputEl.blur();
   // 推送到 Mac 端
   doSync(false);
 }

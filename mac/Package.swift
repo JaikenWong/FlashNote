@@ -17,6 +17,11 @@ let package = Package(
                 .copy("Resources/icon-1024.png"),
                 .copy("Resources/web")
             ]
+        ),
+        .testTarget(
+            name: "FlashNoteTests",
+            dependencies: ["FlashNote"],
+            path: "Tests/FlashNoteTests"
         )
     ]
 )
